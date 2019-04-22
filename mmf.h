@@ -145,7 +145,7 @@ Point
 MMFCuda::getDelta( int k, int m, Point w, Point u, Point f ){
   int dx = int( k * ( u.x - w.x + ( 2 * f.x ) ) )/ ( 2 * m );
   int dy = int( k * ( u.y - w.y + ( 2 * f.y ) ) )/ ( 2 * m );
-#ifndef DEBUG
+#ifdef DEBUG
   std::cout << "Delta: ( " << dx << ", " << dy << " ) " << std::endl;  
 #endif
   return Point( dx, dy );
@@ -167,7 +167,7 @@ Point
 MMFCuda::getSize( int k, int m, Point w, Point u ){
   int sx = ((m * u.x) + (w.x * k) - (k * u.x)) / m;
   int sy = ((m * u.y) + (w.y * k) - (k * u.y)) / m;
-#ifndef DEBUG
+#ifdef DEBUG
   std::cout << "Size: ( " << sx << ", " << sy << " ) " << std::endl;  
 #endif
   return Point( sx, sy );
@@ -191,7 +191,7 @@ Point
 MMFCuda::mapLevel2Image( int k, int m, Point w, Point u, Point f, Point px ){
   int _px = ( (k * w.x) * (u.x - w.x) + (2 * k * w.x * f.x) + (2 * px.x) * ( (m * u.x) - (k * u.x) + (k * w.x) ) )/ (2 * m * w.x);
   int _py = ( (k * w.y) * (u.y - w.y) + (2 * k * w.y * f.y) + (2 * px.y) * ( (m * u.y) - (k * u.y) + (k * w.y) ) )/ (2 * m * w.y);
-#ifndef DEBUG
+#ifdef DEBUG
   std::cout << "Map: ( " << _px << ", " << _py << " ) " << std::endl;  
 #endif
   return Point( _px, _py );

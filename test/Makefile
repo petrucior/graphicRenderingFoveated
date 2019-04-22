@@ -49,6 +49,13 @@ mmf:	mmf.cpp $(DIR)/mmf.h
 	$(CC) $(LFLAGS) mmf.cpp `pkg-config --cflags --libs opencv` -o mmf $(LIBS) -O3
 
 #
+# Regra de compilação e ligação do executáveis com debug
+# 
+debug:	mmf.cpp $(DIR)/mmf.h
+	$(CC) $(LFLAGS) mmf.cpp `pkg-config --cflags --libs opencv` -o mmf $(LIBS) -DDEBUG=1 -O3
+
+
+#
 # Regra que elimina arquivos intermediários
 # 
 clean:

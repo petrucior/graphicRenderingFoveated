@@ -17,7 +17,9 @@ int main(int argc, char** argv){
     return -1;
   }
 
-  //MMFCuda mmf;
+  MMFCuda mmf;
+
+  Point delta = mmf.getDelta( 2, 4, Point(40, 40), Point(image.cols, image.rows), Point(0, 0));
   
   return 0;
 }
