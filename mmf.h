@@ -32,6 +32,8 @@
 //#include <cuda.h>
 //#include <cuda_runtime.h>
 
+using namespace cv;
+
 /**
  * \struct MMFCuda
  *
@@ -44,7 +46,7 @@ struct MMFCuda{
   //
 
   /**
-   * \fn Size getDelta( int k, int m, Size w, Size u, Size f )
+   * \fn Point getDelta( int k, int m, Point w, Point u, Point f )
    *
    * \brief Calculates the initial pixel to build MMF.
    *
@@ -56,10 +58,10 @@ struct MMFCuda{
    *
    * \return Return the initial pixel on the both axis of level k to build MMF.
    */
-  Size getDelta( int k, int m, Size w, Size u, Size f );
+  Point getDelta( int k, int m, Point w, Point u, Point f );
 
   /**
-   * \fn Size getSize( int k, int m, Size w, Size u )
+   * \fn Point getSize( int k, int m, Point w, Point u )
    *
    * \brief Calculates the final pixel to build MMF.
    *
@@ -70,10 +72,10 @@ struct MMFCuda{
    *
    * \return Return the final pixel on the both axis of level k to build MMF.
    */
-  Size getSize( int k, int m, Size w, Size u );
+  Point getSize( int k, int m, Point w, Point u );
 
   /**
-   * \fn Size mapLevel2Image( int k, int m, Size w, Size u, Size f, Size px )
+   * \fn Point mapLevel2Image( int k, int m, Point w, Point u, Point f, Point px )
    *
    * \brief Calculates the position of pixel on the level to image.
    *
@@ -86,10 +88,26 @@ struct MMFCuda{
    *
    * \return Return the position of pixel on the both axis to image.
    */
-  Size mapLevel2Image( int k, int m, Size w, Size u, Size f, Size px );
+  Point mapLevel2Image( int k, int m, Point w, Point u, Point f, Point px );
 
   /**
-   * \fn Mat mmf( Mat img, int k, int m, Size w, Size u, Size f )
+   * \fn Mat MMF_CPU( Mat img, int k, int m, Point w, Point u, Point f )
+   *
+   * \brief Calculates the levels of MMF method using CPUs.
+   *
+   * \param img - Image to be foveated.
+   *        k - Level of fovea
+   *        m - Number levels of fovea
+   *        w - Size of levels
+   *        u - Size of image
+   *        f - Position (x, y) of the fovea
+   *
+   * \return Return the level of MMF method.
+   */
+  Mat MMF_CPU( Mat img, int k, int m, Point w, Point u, Point f );
+  
+  /**
+   * \fn Mat mmf( Mat img, int k, int m, Point w, Point u, Point f )
    *
    * \brief Calculates the levels of MMF method.
    *
@@ -102,7 +120,7 @@ struct MMFCuda{
    *
    * \return Return the level of MMF method.
    */
-  Mat mmf( Mat img, int k, int m, Size w, Size u, Size f );
+  Mat mmf( Mat img, int k, int m, Point w, Point u, Point f );
   
 };
 
@@ -111,7 +129,7 @@ struct MMFCuda{
 // Implementation
 
 /**
- * \fn Size getDelta( int k, int m, Size w, Size u, Size f )
+ * \fn Point getDelta( int k, int m, Point w, Point u, Point f )
  *
  * \brief Calculates the initial pixel to build MMF.
  *
@@ -123,18 +141,18 @@ struct MMFCuda{
  *
  * \return Return the initial pixel on the both axis of level k to build MMF.
  */
-Size 
-MMFCuda::getDelta( int k, int m, Size w, Size u, Size f ){
+Point 
+MMFCuda::getDelta( int k, int m, Point w, Point u, Point f ){
   int dx = int( k * ( u.x - w.x + ( 2 * f.x ) ) )/ ( 2 * m );
   int dy = int( k * ( u.y - w.y + ( 2 * f.y ) ) )/ ( 2 * m );
 #ifndef DEBUG
   std::cout << "Delta: ( " << dx << ", " << dy << " ) " << std::endl;  
 #endif
-  return Size( dx, dy );
+  return Point( dx, dy );
 }
 
 /**
- * \fn Size getSize( int k, int m, Size w, Size u )
+ * \fn Point getSize( int k, int m, Point w, Point u )
  *
  * \brief Calculates the final pixel to build MMF.
  *
@@ -145,18 +163,18 @@ MMFCuda::getDelta( int k, int m, Size w, Size u, Size f ){
  *
  * \return Return the final pixel on the both axis of level k to build MMF.
  */
-Size 
-MMFCuda::getSize( int k, int m, Size w, Size u ){
+Point 
+MMFCuda::getSize( int k, int m, Point w, Point u ){
   int sx = ((m * u.x) + (w.x * k) - (k * u.x)) / m;
   int sy = ((m * u.y) + (w.y * k) - (k * u.y)) / m;
 #ifndef DEBUG
   std::cout << "Size: ( " << sx << ", " << sy << " ) " << std::endl;  
 #endif
-  return Size( sx, sy );
+  return Point( sx, sy );
 }
 
 /**
- * \fn Size mapLevel2Image( int k, int m, Size w, Size u, Size f, Size px )
+ * \fn Point mapLevel2Image( int k, int m, Point w, Point u, Point f, Point px )
  *
  * \brief Calculates the position of pixel on the level to image.
  *
@@ -169,18 +187,48 @@ MMFCuda::getSize( int k, int m, Size w, Size u ){
  *
  * \return Return the position of pixel on the both axis to image.
  */
-Size 
-MMFCuda::mapLevel2Image( int k, int m, Size w, Size u, Size f, Size px ){
+Point 
+MMFCuda::mapLevel2Image( int k, int m, Point w, Point u, Point f, Point px ){
   int _px = ( (k * w.x) * (u.x - w.x) + (2 * k * w.x * f.x) + (2 * px.x) * ( (m * u.x) - (k * u.x) + (k * w.x) ) )/ (2 * m * w.x);
   int _py = ( (k * w.y) * (u.y - w.y) + (2 * k * w.y * f.y) + (2 * px.y) * ( (m * u.y) - (k * u.y) + (k * w.y) ) )/ (2 * m * w.y);
 #ifndef DEBUG
   std::cout << "Map: ( " << _px << ", " << _py << " ) " << std::endl;  
 #endif
-  return Size( _px, _py );
+  return Point( _px, _py );
+}
+
+/**
+ * \fn Mat MMF_CPU( Mat img, int k, int m, Point w, Point u, Point f )
+ *
+ * \brief Calculates the levels of MMF method using CPUs.
+ *
+ * \param img - Image to be foveated.
+ *        k - Level of fovea
+ *        m - Number levels of fovea
+ *        w - Size of levels
+ *        u - Size of image
+ *        f - Position (x, y) of the fovea
+ *
+ * \return Return the level of MMF method.
+ */
+Mat 
+MMFCuda::MMF_CPU( Mat img, int k, int m, Point w, Point u, Point f ){
+  Point d = getDelta( k,  m, w, u, f );
+  Point s = getSize( k, m, w, u );
+  Mat imgLevel = img( Rect( d.x, d.y, s.x, s.y ) ); // Getting ROI of image
+  Mat imgLevelResult;
+  if ( k < m )
+    resize( imgLevel, imgLevelResult, Size(w.x, w.y), 0, 0, CV_INTER_LINEAR ); // Read page 171 of book Hands on GPU Accelerated Computer Vision With OpenCV And Cuda
+#ifdef DEBUG
+  imshow( "levels", imgLevelResult );
+  waitKey( 0 ); // Waiting enter
+#endif
+  return imgLevel;
 }
   
+  
 /**
- * \fn Mat mmf( Mat img, int k, int m, Size w, Size u, Size f )
+ * \fn Mat mmf( Mat img, int k, int m, Point w, Point u, Point f )
  *
  * \brief Calculates the levels of MMF method.
  *
@@ -193,20 +241,20 @@ MMFCuda::mapLevel2Image( int k, int m, Size w, Size u, Size f, Size px ){
  *
  * \return Return the level of MMF method.
  */
-Mat mmf( Mat img, int k, int m, Size w, Size u, Size f ){
-  Size d = getDelta( k,  m, w, u, f );
-  Size s = getSize( k, m, w, u );
+Mat mmf( Mat img, int k, int m, Point w, Point u, Point f ){
+  /*Point d = getDelta( k,  m, w, u, f );
+  Point s = getSize( k, m, w, u );
   //Mat imgLevel( s.y - d.y, s.x - d.x, img.type() );
   Mat h_imgLevel = img( Rect( d.x, d.y, s.x, s.y ) ); // Getting ROI of image
   cv::cuda::GpuMat d_imgLevel, d_imgLevelResult; // Declaring images on device
   d_imgLevel.upload( h_imgLevel ); // Uploading imgLevel to device
   if ( k < m )
-    cv::cuda::resize( d_imgLevel, d_imgLevelResult, w, cv::INTER_LINEAR); // Read page 171 of book Hands on GPU Accelerated Computer Vision With OpenCV And Cuda
+  cv::cuda::resize( d_imgLevel, d_imgLevelResult, w, cv::INTER_LINEAR); // Read page 171 of book Hands on GPU Accelerated Computer Vision With OpenCV And Cuda*/
   Mat h_imgLevelResult;
-  d_imgLevelResult.download( h_imgLevelResult );
+  /*d_imgLevelResult.download( h_imgLevelResult );
 #ifdef DEBUG
   imshow( "levels", h_imgLevelResult );
   waitKey( 0 ); // Waiting enter
-#endif
-  return imgLevel;
+  #endif*/
+  return h_imgLevelResult;
 }
