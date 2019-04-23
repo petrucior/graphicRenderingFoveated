@@ -29,6 +29,9 @@
 
 #include <stdio.h>
 #include <iostream>
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 //#include <cuda.h>
 //#include <cuda_runtime.h>
 
@@ -95,7 +98,7 @@ struct MMFCuda{
    *
    * \brief Calculates the levels of MMF method using CPUs.
    *
-   * \param img - Image to be foveated.
+   * \param img - Image to be foveated
    *        k - Level of fovea
    *        m - Number levels of fovea
    *        w - Size of levels
@@ -107,11 +110,11 @@ struct MMFCuda{
   Mat MMF_CPU( Mat img, int k, int m, Point w, Point u, Point f );
   
   /**
-   * \fn Mat mmf( Mat img, int k, int m, Point w, Point u, Point f )
+   * \fn Mat MMF_GPU( Mat img, int k, int m, Point w, Point u, Point f )
    *
-   * \brief Calculates the levels of MMF method.
+   * \brief Calculates the levels of MMF method using GPUs.
    *
-   * \param img - Image to be foveated.
+   * \param img - Image to be foveated
    *        k - Level of fovea
    *        m - Number levels of fovea
    *        w - Size of levels
@@ -120,7 +123,25 @@ struct MMFCuda{
    *
    * \return Return the level of MMF method.
    */
-  Mat mmf( Mat img, int k, int m, Point w, Point u, Point f );
+  Mat MMF_GPU( Mat img, int k, int m, Point w, Point u, Point f );
+  
+  /**
+   * \fn Mat foveated( Mat img, int m, Point w, Point u, Point f, int method )
+   *
+   * \brief Calculates the levels of MMF method.
+   *
+   * \param img - Image to be foveated
+   *        m - Number levels of fovea
+   *        w - Size of levels
+   *        u - Size of image
+   *        f - Position (x, y) of the fovea
+   *        method - If (0) by default will be considered MMF_CPU, else (1) will be 
+   *        considered MMF_GPU. 
+   *
+   * \return Return the level of MMF method.
+   */
+  Mat foveated( Mat img, int m, Point w, Point u, Point f, int method );
+  
   
 };
 
@@ -202,7 +223,7 @@ MMFCuda::mapLevel2Image( int k, int m, Point w, Point u, Point f, Point px ){
  *
  * \brief Calculates the levels of MMF method using CPUs.
  *
- * \param img - Image to be foveated.
+ * \param img - Image to be foveated
  *        k - Level of fovea
  *        m - Number levels of fovea
  *        w - Size of levels
@@ -228,11 +249,11 @@ MMFCuda::MMF_CPU( Mat img, int k, int m, Point w, Point u, Point f ){
   
   
 /**
- * \fn Mat mmf( Mat img, int k, int m, Point w, Point u, Point f )
+ * \fn Mat MMF_GPU( Mat img, int k, int m, Point w, Point u, Point f )
  *
- * \brief Calculates the levels of MMF method.
+ * \brief Calculates the levels of MMF method using GPUs.
  *
- * \param img - Image to be foveated.
+ * \param img - Image to be foveated
  *        k - Level of fovea
  *        m - Number levels of fovea
  *        w - Size of levels
@@ -241,7 +262,8 @@ MMFCuda::MMF_CPU( Mat img, int k, int m, Point w, Point u, Point f ){
  *
  * \return Return the level of MMF method.
  */
-Mat mmf( Mat img, int k, int m, Point w, Point u, Point f ){
+Mat 
+MMFCuda::MMF_GPU( Mat img, int k, int m, Point w, Point u, Point f ){
   /*Point d = getDelta( k,  m, w, u, f );
   Point s = getSize( k, m, w, u );
   //Mat imgLevel( s.y - d.y, s.x - d.x, img.type() );
@@ -258,3 +280,53 @@ Mat mmf( Mat img, int k, int m, Point w, Point u, Point f ){
   #endif*/
   return h_imgLevelResult;
 }
+
+/**
+ * \fn Mat foveated( Mat img, int m, Point w, Point u, Point f, int method )
+ *
+ * \brief Calculates the levels of MMF method.
+ *
+ * \param img - Image to be foveated
+ *        m - Number levels of fovea
+ *        w - Size of levels
+ *        u - Size of image
+ *        f - Position (x, y) of the fovea
+ *        method - If (0) by default will be considered MMF_CPU, else (1) will be 
+ *        considered MMF_GPU. 
+ *
+ * \return Return the level of MMF method.
+ */
+Mat 
+MMFCuda::foveated( Mat img, int m, Point w, Point u, Point f, int method ){
+  Mat imgFoveated = img.clone();
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+  for ( int k = 0; k < m + 1; k++ ){ // Levels
+    Mat imgLevel;
+    if ( method == 0 ) // MMF_CPU
+      imgLevel = MMF_CPU( img, k, m, w, u, f );
+    else // MMF_GPU
+      imgLevel = MMF_GPU( img, k, m, w, u, f );
+    // Mapping levels to foveated image
+    Point initial = mapLevel2Image( k, m, w, u, f, Point( 0, 0 ) ); 
+    Point final = mapLevel2Image( k, m, w, u, f, Point( w.x, w.y ) );
+#ifdef DEBUG
+    std::cout << "(xi, yi) = (" << initial.x << ", " << initial.y << ")" << endl;
+    std::cout << "(xf, yf) = (" << final.x << ", " << final.y << ")" << endl; 
+#endif
+    Rect roi = Rect( initial.x, initial.y, final.x, final.y );
+#ifdef _OPENMP // Creating barrier because the access by multiples threads can generate problems 
+//#pragma omp barrier
+#pragma omp ordered
+#endif
+    if ( k < m ){ // Copying levels to foveated image
+      resize( imgLevel, imgLevel, Size(final.x - initial.x, final.y - initial.y), 0, 0, CV_INTER_LINEAR );
+      imgLevel.copyTo(imgFoveated(roi));
+    }
+    else
+      imgLevel.copyTo(imgFoveated(roi));
+  }
+  return imgFoveated;
+}
+  
