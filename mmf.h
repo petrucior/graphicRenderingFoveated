@@ -38,11 +38,11 @@
 using namespace cv;
 
 /**
- * \struct MMFCuda
+ * \struct MMF
  *
- * \brief Struct for fovea using cuda library.
+ * \brief Struct for fovea using OpenMP and Cuda libraries.
  */
-struct MMFCuda{
+struct MMF{
   
   //
   // Methods
@@ -163,7 +163,7 @@ struct MMFCuda{
  * \return Return the initial pixel on the both axis of level k to build MMF.
  */
 Point 
-MMFCuda::getDelta( int k, int m, Point w, Point u, Point f ){
+MMF::getDelta( int k, int m, Point w, Point u, Point f ){
   int dx = int( k * ( u.x - w.x + ( 2 * f.x ) ) )/ ( 2 * m );
   int dy = int( k * ( u.y - w.y + ( 2 * f.y ) ) )/ ( 2 * m );
 #ifdef DEBUG
@@ -185,7 +185,7 @@ MMFCuda::getDelta( int k, int m, Point w, Point u, Point f ){
  * \return Return the final pixel on the both axis of level k to build MMF.
  */
 Point 
-MMFCuda::getSize( int k, int m, Point w, Point u ){
+MMF::getSize( int k, int m, Point w, Point u ){
   int sx = ((m * u.x) + (w.x * k) - (k * u.x)) / m;
   int sy = ((m * u.y) + (w.y * k) - (k * u.y)) / m;
 #ifdef DEBUG
@@ -209,7 +209,7 @@ MMFCuda::getSize( int k, int m, Point w, Point u ){
  * \return Return the position of pixel on the both axis to image.
  */
 Point 
-MMFCuda::mapLevel2Image( int k, int m, Point w, Point u, Point f, Point px ){
+MMF::mapLevel2Image( int k, int m, Point w, Point u, Point f, Point px ){
   int _px = ( (k * w.x) * (u.x - w.x) + (2 * k * w.x * f.x) + (2 * px.x) * ( (m * u.x) - (k * u.x) + (k * w.x) ) )/ (2 * m * w.x);
   int _py = ( (k * w.y) * (u.y - w.y) + (2 * k * w.y * f.y) + (2 * px.y) * ( (m * u.y) - (k * u.y) + (k * w.y) ) )/ (2 * m * w.y);
 #ifdef DEBUG
@@ -233,7 +233,7 @@ MMFCuda::mapLevel2Image( int k, int m, Point w, Point u, Point f, Point px ){
  * \return Return the level of MMF method.
  */
 Mat 
-MMFCuda::MMF_CPU( Mat img, int k, int m, Point w, Point u, Point f ){
+MMF::MMF_CPU( Mat img, int k, int m, Point w, Point u, Point f ){
   Point d = getDelta( k,  m, w, u, f );
   Point s = getSize( k, m, w, u );
   Mat imgLevel = img( Rect( d.x, d.y, s.x, s.y ) ); // Getting ROI of image
@@ -262,7 +262,7 @@ MMFCuda::MMF_CPU( Mat img, int k, int m, Point w, Point u, Point f ){
  * \return Return the level of MMF method.
  */
 Mat 
-MMFCuda::MMF_GPU( Mat img, int k, int m, Point w, Point u, Point f ){
+MMF::MMF_GPU( Mat img, int k, int m, Point w, Point u, Point f ){
   /*Point d = getDelta( k,  m, w, u, f );
   Point s = getSize( k, m, w, u );
   //Mat imgLevel( s.y - d.y, s.x - d.x, img.type() );
@@ -296,32 +296,32 @@ MMFCuda::MMF_GPU( Mat img, int k, int m, Point w, Point u, Point f ){
  * \return Return the level of MMF method.
  */
 Mat 
-MMFCuda::foveated( Mat img, int m, Point w, Point u, Point f, int method ){
+MMF::foveated( Mat img, int m, Point w, Point u, Point f, int method ){
   Mat imgFoveated = img.clone();
+  if ( method == 0 ){ // MMF_CPU
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static, m+1) // Schedule(static, m+1) keeps the order
 #endif
-  for ( int k = 0; k <= m; k++ ){ // Levels
-    Mat imgLevel;
-    if ( method == 0 ) // MMF_CPU
-      imgLevel = MMF_CPU( img, k, m, w, u, f );
-    else // MMF_GPU
-      imgLevel = MMF_GPU( img, k, m, w, u, f );
-    // Mapping levels to foveated image
-    Point initial = mapLevel2Image( k, m, w, u, f, Point( 0, 0 ) ); 
-    Point final = mapLevel2Image( k, m, w, u, f, Point( w.x, w.y ) );
+    for ( int k = 0; k <= m; k++ ){ // Levels
+      Mat imgLevel = MMF_CPU( img, k, m, w, u, f );
+      // Mapping levels to foveated image
+      Point initial = mapLevel2Image( k, m, w, u, f, Point( 0, 0 ) ); 
+      Point final = mapLevel2Image( k, m, w, u, f, Point( w.x, w.y ) );
 #ifdef DEBUG
-    std::cout << "(xi, yi) = (" << initial.x << ", " << initial.y << ")" << std::endl;
-    std::cout << "(xf, yf) = (" << final.x << ", " << final.y << ")" << std::endl;
+      std::cout << "(xi, yi) = (" << initial.x << ", " << initial.y << ")" << std::endl;
+      std::cout << "(xf, yf) = (" << final.x << ", " << final.y << ")" << std::endl;
 #endif
-    Rect roi = Rect( initial.x, initial.y, final.x - initial.x, final.y - initial.y );
-    if ( k < m ){ // Copying levels to foveated image
-      resize( imgLevel, imgLevel, Size(final.x - initial.x, final.y - initial.y), 0, 0, CV_INTER_LINEAR );
-      imgLevel.copyTo( imgFoveated( roi ) );
+      Rect roi = Rect( initial.x, initial.y, final.x - initial.x, final.y - initial.y );
+      if ( k < m ){ // Copying levels to foveated image
+	resize( imgLevel, imgLevel, Size(final.x - initial.x, final.y - initial.y), 0, 0, CV_INTER_LINEAR );
+	imgLevel.copyTo( imgFoveated( roi ) );
+      }
+      else
+	imgLevel.copyTo( imgFoveated( roi ) );      
     }
-    else
-      imgLevel.copyTo( imgFoveated( roi ) );
-      
+  }
+  else{ // MMF_GPU
+    
   }
   return imgFoveated;
 }
