@@ -271,7 +271,7 @@ MMF::MMF_CPU( Mat img, int k, int m, Point w, Point u, Point f ){
   Point s = getSize( k, m, w, u );
   Mat imgLevel = img( Rect( d.x, d.y, s.x, s.y ) ); // Getting ROI of image
   if ( k < m )
-    resize( imgLevel, imgLevel, Size(w.x, w.y), 0, 0, CV_INTER_LINEAR ); // Read page 171 of book Hands on GPU Accelerated Computer Vision With OpenCV And Cuda
+    resize( imgLevel, imgLevel, Size(w.x, w.y), 0, 0, CV_INTER_LINEAR );
 #ifdef DEBUG
   imshow( "levels", imgLevel );
   waitKey( 0 ); // Waiting enter
@@ -312,7 +312,6 @@ MMF::MMF_GPU( cv::cuda::GpuMat* img, std::vector< cv::cuda::GpuMat >* output, in
 #endif
 }
 
-  
 /**
  * \fn Mat MMF_GPU( Mat img, int k, int m, Point w, Point u, Point f )
  *
@@ -387,7 +386,15 @@ MMF::foveated( Mat img, int m, Point w, Point u, Point f, int method ){
     }
   }
   else{ // MMF_GPU
-    
+#ifdef __CUDACC__
+    cv::cuda::GpuMat d_img; // Declaring images on device
+    std::vector< cv::cuda::GpuMat > d_output;
+    d_img.upload( img ); // Uploading imgLevel to device
+    MMF_GPU << < 512, 512 > >> ( d_img, d_output, m, w, u, f );
+    std::vector< Mat > output;
+    output.download( d_output );
+    // This part of "stitches images" can be done by a function
+#endif
   }
   return imgFoveated;
 }
