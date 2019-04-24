@@ -32,8 +32,10 @@
 #ifdef _OPENMP
 #include <omp.h>
 #endif
-//#include <cuda.h>
-//#include <cuda_runtime.h>
+#ifdef __CUDACC__
+#include <cuda.h>
+#include <cuda_runtime.h>
+#endif
 
 using namespace cv;
 
@@ -61,6 +63,9 @@ struct MMF{
    *
    * \return Return the initial pixel on the both axis of level k to build MMF.
    */
+#ifdef __CUDACC__
+  __device__
+#endif
   Point getDelta( int k, int m, Point w, Point u, Point f );
 
   /**
@@ -75,6 +80,9 @@ struct MMF{
    *
    * \return Return the final pixel on the both axis of level k to build MMF.
    */
+#ifdef __CUDACC__
+  __device__
+#endif
   Point getSize( int k, int m, Point w, Point u );
 
   /**
@@ -110,6 +118,24 @@ struct MMF{
   Mat MMF_CPU( Mat img, int k, int m, Point w, Point u, Point f );
   
   /**
+   * \fn __global__ void MMF_GPU( cv::cuda::GpuMat* img, std::vector< cv::cuda::GpuMat >* output, int m, Point w, Point u, Point f )
+   *
+   * \brief Calculates the levels of MMF method using GPUs. This approach consideres 
+   * that MMF was built by n threads, where each thread will process a single level.
+   *
+   * \param img - Image pointer to be foveated
+   *        output - Image pointer for level of MMF method
+   *        m - Number levels of fovea
+   *        w - Size of levels
+   *        u - Size of image
+   *        f - Position (x, y) of the fovea
+   */
+#ifdef __CUDACC__
+  __global__
+#endif
+  void MMF_GPU( cv::cuda::GpuMat* img, std::vector< cv::cuda::GpuMat >* output, int m, Point w, Point u, Point f );
+  
+  /**
    * \fn Mat MMF_GPU( Mat img, int k, int m, Point w, Point u, Point f )
    *
    * \brief Calculates the levels of MMF method using GPUs.
@@ -125,6 +151,7 @@ struct MMF{
    */
   Mat MMF_GPU( Mat img, int k, int m, Point w, Point u, Point f );
   
+
   /**
    * \fn Mat foveated( Mat img, int m, Point w, Point u, Point f, int method )
    *
@@ -162,6 +189,9 @@ struct MMF{
  *
  * \return Return the initial pixel on the both axis of level k to build MMF.
  */
+#ifdef __CUDACC__
+  __device__
+#endif
 Point 
 MMF::getDelta( int k, int m, Point w, Point u, Point f ){
   int dx = int( k * ( u.x - w.x + ( 2 * f.x ) ) )/ ( 2 * m );
@@ -184,6 +214,9 @@ MMF::getDelta( int k, int m, Point w, Point u, Point f ){
  *
  * \return Return the final pixel on the both axis of level k to build MMF.
  */
+#ifdef __CUDACC__
+  __device__
+#endif
 Point 
 MMF::getSize( int k, int m, Point w, Point u ){
   int sx = ((m * u.x) + (w.x * k) - (k * u.x)) / m;
@@ -245,7 +278,38 @@ MMF::MMF_CPU( Mat img, int k, int m, Point w, Point u, Point f ){
 #endif
   return imgLevel;
 }
-  
+
+/**
+ * \fn __global__ void MMF_GPU( cv::cuda::GpuMat* img, std::vector< cv::cuda::GpuMat >* output, int m, Point w, Point u, Point f )
+ *
+ * \brief Calculates the levels of MMF method using GPUs. This approach consideres 
+ * that MMF was built by n threads, where each thread will process a single level.
+ *
+ * \param img - Image pointer to be foveated
+ *        output - Image pointer for level of MMF method
+ *        m - Number levels of fovea
+ *        w - Size of levels
+ *        u - Size of image
+ *        f - Position (x, y) of the fovea
+ */
+#ifdef __CUDACC__
+__global__ 
+#endif
+void 
+MMF::MMF_GPU( cv::cuda::GpuMat* img, std::vector< cv::cuda::GpuMat >* output, int m, Point w, Point u, Point f ){
+  // Getting index of current kernel
+  int tid = threadIdx.x + blockIdx.x * blockDim.x;
+  while ( tid < m + 1 ){ // Each level will be accessed
+    Point d = getDelta( k,  m, w, u, f );
+    Point s = getSize( k, m, w, u );
+    cv::cuda::GpuMat imgLevel = img( Rect( d.x, d.y, s.x, s.y ) ); // Getting ROI of image
+    if ( k < m )
+      cv::cuda::resize( imgLevel, imgLevel, w, cv::INTER_LINEAR); // Read page 171 of book Hands on GPU Accelerated Computer Vision With OpenCV And Cuda*/
+    output[tid] = imgLevel; // Updating vector with levels of multiresolution
+    tid += blockDim.x * gridDim.x;
+  }
+}
+
   
 /**
  * \fn Mat MMF_GPU( Mat img, int k, int m, Point w, Point u, Point f )
