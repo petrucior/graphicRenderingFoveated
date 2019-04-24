@@ -1,2 +1,2 @@
-# projectFoveaCuda
-This project was created to build foveae using cuda library.
+# projectFovea
+This project was created to build MMF foveae using OpenMP and Cuda libraries.
