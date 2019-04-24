@@ -297,17 +297,19 @@ __global__
 #endif
 void 
 MMF::MMF_GPU( cv::cuda::GpuMat* img, std::vector< cv::cuda::GpuMat >* output, int m, Point w, Point u, Point f ){
+#ifdef __CUDACC__
   // Getting index of current kernel
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
   while ( tid < m + 1 ){ // Each level will be accessed
-    Point d = getDelta( k,  m, w, u, f );
-    Point s = getSize( k, m, w, u );
+    Point d = getDelta( tid,  m, w, u, f );
+    Point s = getSize( tid, m, w, u );
     cv::cuda::GpuMat imgLevel = img( Rect( d.x, d.y, s.x, s.y ) ); // Getting ROI of image
     if ( k < m )
       cv::cuda::resize( imgLevel, imgLevel, w, cv::INTER_LINEAR); // Read page 171 of book Hands on GPU Accelerated Computer Vision With OpenCV And Cuda*/
     output[tid] = imgLevel; // Updating vector with levels of multiresolution
     tid += blockDim.x * gridDim.x;
   }
+#endif
 }
 
   
