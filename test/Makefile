@@ -15,7 +15,7 @@ CFLAGS= -Wall -pedantic -ansi -g -c
 #
 # A variável LFLAGS indica que opção de compilação queremos
 #
-LFLAGS= -Wall -g
+LFLAGS= -Wall -g -fopenmp
 
 #
 # A variável DIR indica o diretório dos arquivos de cabeçalho do projeto

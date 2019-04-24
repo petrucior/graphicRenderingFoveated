@@ -237,11 +237,10 @@ MMFCuda::MMF_CPU( Mat img, int k, int m, Point w, Point u, Point f ){
   Point d = getDelta( k,  m, w, u, f );
   Point s = getSize( k, m, w, u );
   Mat imgLevel = img( Rect( d.x, d.y, s.x, s.y ) ); // Getting ROI of image
-  Mat imgLevelResult;
   if ( k < m )
-    resize( imgLevel, imgLevelResult, Size(w.x, w.y), 0, 0, CV_INTER_LINEAR ); // Read page 171 of book Hands on GPU Accelerated Computer Vision With OpenCV And Cuda
+    resize( imgLevel, imgLevel, Size(w.x, w.y), 0, 0, CV_INTER_LINEAR ); // Read page 171 of book Hands on GPU Accelerated Computer Vision With OpenCV And Cuda
 #ifdef DEBUG
-  imshow( "levels", imgLevelResult );
+  imshow( "levels", imgLevel );
   waitKey( 0 ); // Waiting enter
 #endif
   return imgLevel;
@@ -300,9 +299,9 @@ Mat
 MMFCuda::foveated( Mat img, int m, Point w, Point u, Point f, int method ){
   Mat imgFoveated = img.clone();
 #ifdef _OPENMP
-#pragma omp parallel for
+#pragma omp parallel for schedule(static, m+1) // Schedule(static, m+1) keeps the order
 #endif
-  for ( int k = 0; k < m + 1; k++ ){ // Levels
+  for ( int k = 0; k <= m; k++ ){ // Levels
     Mat imgLevel;
     if ( method == 0 ) // MMF_CPU
       imgLevel = MMF_CPU( img, k, m, w, u, f );
@@ -312,21 +311,18 @@ MMFCuda::foveated( Mat img, int m, Point w, Point u, Point f, int method ){
     Point initial = mapLevel2Image( k, m, w, u, f, Point( 0, 0 ) ); 
     Point final = mapLevel2Image( k, m, w, u, f, Point( w.x, w.y ) );
 #ifdef DEBUG
-    std::cout << "(xi, yi) = (" << initial.x << ", " << initial.y << ")" << endl;
-    std::cout << "(xf, yf) = (" << final.x << ", " << final.y << ")" << endl; 
+    std::cout << "(xi, yi) = (" << initial.x << ", " << initial.y << ")" << std::endl;
+    std::cout << "(xf, yf) = (" << final.x << ", " << final.y << ")" << std::endl;
 #endif
-    Rect roi = Rect( initial.x, initial.y, final.x, final.y );
-#ifdef _OPENMP // Creating barrier because the access by multiples threads can generate problems 
-//#pragma omp barrier
-#pragma omp ordered
-#endif
+    Rect roi = Rect( initial.x, initial.y, final.x - initial.x, final.y - initial.y );
     if ( k < m ){ // Copying levels to foveated image
       resize( imgLevel, imgLevel, Size(final.x - initial.x, final.y - initial.y), 0, 0, CV_INTER_LINEAR );
-      imgLevel.copyTo(imgFoveated(roi));
+      imgLevel.copyTo( imgFoveated( roi ) );
     }
     else
-      imgLevel.copyTo(imgFoveated(roi));
+      imgLevel.copyTo( imgFoveated( roi ) );
+      
   }
   return imgFoveated;
 }
-  
+ 

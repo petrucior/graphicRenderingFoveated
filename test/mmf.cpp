@@ -18,8 +18,9 @@ int main(int argc, char** argv){
   }
 
   MMFCuda mmf;
-
-  Mat imgFoveated = mmf.foveated( image, 4, Point(60, 60), Point(image.cols, image.rows), Point(0, 0), 0 );
+  
+  //Mat imgFoveated = mmf.MMF_CPU( image, 4, 4, Point(40, 40), Point(image.cols, image.rows), Point(0, 0) );
+  Mat imgFoveated = mmf.foveated( image, 1000, Point(60, 60), Point(image.cols, image.rows), Point(0, 0), 0 );
 
   imshow("Foveated image", imgFoveated);
   waitKey(0);
