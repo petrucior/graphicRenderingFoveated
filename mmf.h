@@ -395,7 +395,7 @@ MMF::foveated( Mat img, int m, Point w, Point u, Point f, int method ){
     std::vector< Mat > output;
     //output.download( d_output );
     // This part of "blend images" can be done by a function
-#endif
+    
     for ( int k = 0; k <= m; k++ ){ // Levels
       // Mapping levels to foveated image
       Point initial = mapLevel2Image( k, m, w, u, f, Point( 0, 0 ) ); 
@@ -405,7 +405,6 @@ MMF::foveated( Mat img, int m, Point w, Point u, Point f, int method ){
       std::cout << "(xf, yf) = (" << final.x << ", " << final.y << ")" << std::endl;
 #endif
       Rect roi = Rect( initial.x, initial.y, final.x - initial.x, final.y - initial.y );
-#ifdef __CUDACC__
       if ( k < m ){ // Copying levels to foveated image
 	cv::cuda::resize( output[k], output[k], Size(final.x - initial.x, final.y - initial.y), 0, 0, CV_INTER_LINEAR );
 	output[k].copyTo( d_imgFoveated( roi ) );
