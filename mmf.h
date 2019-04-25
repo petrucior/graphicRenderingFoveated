@@ -387,14 +387,35 @@ MMF::foveated( Mat img, int m, Point w, Point u, Point f, int method ){
   }
   else{ // MMF_GPU
 #ifdef __CUDACC__
-    cv::cuda::GpuMat d_img; // Declaring images on device
+    cv::cuda::GpuMat d_img, d_imgFoveated; // Declaring images on device
     std::vector< cv::cuda::GpuMat > d_output;
-    d_img.upload( img ); // Uploading imgLevel to device
+    d_img.upload( img ); // Uploading img to device
+    d_imgFoveated.upload( img ); // Copying img to d_imgFoveated
     MMF_GPU << < 512, 512 > >> ( d_img, d_output, m, w, u, f );
     std::vector< Mat > output;
-    output.download( d_output );
-    // This part of "stitches images" can be done by a function
+    //output.download( d_output );
+    // This part of "blend images" can be done by a function
 #endif
+    for ( int k = 0; k <= m; k++ ){ // Levels
+      // Mapping levels to foveated image
+      Point initial = mapLevel2Image( k, m, w, u, f, Point( 0, 0 ) ); 
+      Point final = mapLevel2Image( k, m, w, u, f, Point( w.x, w.y ) );
+#ifdef DEBUG
+      std::cout << "(xi, yi) = (" << initial.x << ", " << initial.y << ")" << std::endl;
+      std::cout << "(xf, yf) = (" << final.x << ", " << final.y << ")" << std::endl;
+#endif
+      Rect roi = Rect( initial.x, initial.y, final.x - initial.x, final.y - initial.y );
+#ifdef __CUDACC__
+      if ( k < m ){ // Copying levels to foveated image
+	cv::cuda::resize( output[k], output[k], Size(final.x - initial.x, final.y - initial.y), 0, 0, CV_INTER_LINEAR );
+	output[k].copyTo( d_imgFoveated( roi ) );
+      }
+      else
+	output[k].copyTo( d_imgFoveated( roi ) );
+      
+      imgFoveated.download( d_imgFovated );
+#endif      
+    }
   }
   return imgFoveated;
 }
