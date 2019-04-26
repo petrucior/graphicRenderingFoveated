@@ -411,10 +411,9 @@ MMF::foveated( Mat img, int m, Point w, Point u, Point f, int method ){
       }
       else
 	output[k].copyTo( d_imgFoveated( roi ) );
-      
-      imgFoveated.download( d_imgFovated );
-#endif      
     }
+    imgFoveated.download( d_imgFovated );
+#endif      
   }
   return imgFoveated;
 }
