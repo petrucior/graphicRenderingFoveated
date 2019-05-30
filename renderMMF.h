@@ -29,6 +29,7 @@
 
 #include <stdio.h>
 #include <iostream>
+#include <math.h>
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -36,6 +37,22 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #endif
+
+#ifdef __unix__   // Unix
+#include <GL/gl.h>  //GLdouble, Glint, glDrawPixels
+#include <GL/glu.h>
+#include <GL/glut.h> //gluUnProject
+#else // Apple 
+#include <OpenGl/gl.h>
+#include <OpenGl/glu.h>
+#include <GLUT/glut.h>
+#endif
+/*#else  // Windows
+#include <w32api/GL/gl.h> //GLdouble, Glint, glDrawPixels
+#include <w32api/GL/glu.h> 
+#include <w32api/GL/glut.h> //gluUnProject
+#endif*/
+
 
 using namespace cv;
 
@@ -49,7 +66,7 @@ struct RenderMMF{
   //
   // Methods
   //
-
+  
   /**
    * \fn Point getDelta( int k, int m, Point w, Point u, Point f )
    *
@@ -86,6 +103,54 @@ struct RenderMMF{
   Point getSize( int k, int m, Point w, Point u );
 
   /**
+   * \fn std::vector< GLubyte > calcColors( int k, int m, Point d, Point s, Cena* cena, 
+   * Luz* luz, Vetor* lookfrom, Vetor* lookat, GLdouble model[16], GLdouble proj[16], 
+   * GLint view[4] )
+   * 
+   * \brief Calculates the colors of the defined region.
+   *
+   * \param k - Level of fovea
+   *        m - Number levels of fovea
+   *        d - Start point of the region to be analyzed
+   *        s - End point of the region to be analyzed
+   *        cena - Cena que sera aplicado o ray tracing                                                                                                                                        
+   *        luz - Luz no objeto                                                                                                                                                                
+   *        lookfrom - posicao da camera                                                                                                                                                       
+   *        lookat - posicao para onde esta apontada a camera                                                                                                                                  
+   *        model, proj, view - matrizes modelview, projection e viewport
+   *
+   * \return RGB colors to compose the scene
+   */
+  std::vector< GLubyte > calcColors( int k, int m, Point d, Point s, Cena* cena, Luz* luz, 
+				     Vetor* lookfrom, Vetor* lookat, GLdouble model[16], 
+				     GLdouble proj[16], GLint view[4] );
+  
+  /**
+   * \fn GLubyte MMF_CPU( int k, int m, Point w, Point u, Point f,
+   * Cena* cena, Luz* luz, Vetor* lookfrom, Vetor* lookat,                                                                                                            
+   * GLdouble model[16], GLdouble proj[16], GLint view[4] )
+   *
+   * \brief Calculates the levels of MMF method using CPUs.
+   *
+   * \param k - Level of fovea
+   *        m - Number levels of fovea
+   *        w - Size of levels
+   *        u - Size of image
+   *        f - Position (x, y) of the fovea
+   *        cena - Cena que sera aplicado o ray tracing                                                                                                                                        
+   *        luz - Luz no objeto                                                                                                                                                                
+   *        lookfrom - posicao da camera                                                                                                                                                       
+   *        lookat - posicao para onde esta apontada a camera                                                                                                                                  
+   *        model, proj, view - matrizes modelview, projection e viewport                                                                                                                      
+   
+   *
+   * \return Return the level of MMF method.
+   */
+  Mat MMF_CPU( int k, int m, Point w, Point u, Point f, Cena* cena, 
+	       Luz* luz, Vetor* lookfrom, Vetor* lookat, GLdouble model[16], 
+	       GLdouble proj[16], GLint view[4] );
+  
+  /**
    * \fn Point mapLevel2Image( int k, int m, Point w, Point u, Point f, Point px )
    *
    * \brief Calculates the position of pixel on the level to image.
@@ -121,7 +186,7 @@ struct RenderMMF{
  * \return Return the initial pixel on the both axis of level k to build MMF.
  */
 #ifdef __CUDACC__
-  __device__
+__device__
 #endif
 Point 
 RenderMMF::getDelta( int k, int m, Point w, Point u, Point f ){
@@ -146,7 +211,7 @@ RenderMMF::getDelta( int k, int m, Point w, Point u, Point f ){
  * \return Return the final pixel on the both axis of level k to build MMF.
  */
 #ifdef __CUDACC__
-  __device__
+__device__
 #endif
 Point 
 RenderMMF::getSize( int k, int m, Point w, Point u ){
@@ -156,6 +221,190 @@ RenderMMF::getSize( int k, int m, Point w, Point u ){
   std::cout << "Size: ( " << sx << ", " << sy << " ) " << std::endl;  
 #endif
   return Point( sx, sy );
+}
+
+/**
+ * \fn std::vector< GLubyte > calcColors( int k, int m, Point d, Point s, Cena* cena, 
+ * Luz* luz, Vetor* lookfrom, Vetor* lookat, GLdouble model[16], GLdouble proj[16], 
+ * GLint view[4] )
+ * 
+ * \brief Calculates the colors of the defined region.
+ *
+ * \param k - Level of fovea
+ *        m - Number levels of fovea
+ *        d - Start point of the region to be analyzed
+ *        s - End point of the region to be analyzed
+ *        cena - Cena que sera aplicado o ray tracing                                                                                                                                        
+ *        luz - Luz no objeto                                                                                                                                                                
+ *        lookfrom - posicao da camera                                                                                                                                                       
+ *        lookat - posicao para onde esta apontada a camera                                                                                                                                  
+ *        model, proj, view - matrizes modelview, projection e viewport
+ *
+ * \return RGB colors to compose the scene
+ */
+std::vector< GLubyte > 
+RenderMMF::calcColors( int k, int m, Point d, Point s, Cena* cena, Luz* luz, 
+		       Vetor* lookfrom, Vetor* lookat, GLdouble model[16], 
+		       GLdouble proj[16], GLint view[4] ){
+  std::vector< GLubyte > colors (3);
+  colors[0] = 0.0; colors[1] = 0.0; colors[2] = 0.0;
+  Cena* cena_auxiliar = new Cena();
+  Objeto* objeto_salvo = new Objeto();
+  double t_aux;
+  double t_auxMax = -1.0;
+  // Loop parameters
+  int divisionsRegion = 2*( m - k ) + 1;
+  Point gapBetweenSteps = Point( (int)((s.x + d.x)/ divisionsRegion), (int)((s.y + d.y)/ divisionsRegion) );
+  Point stepByStepRegion = Point( (int)(gapBetweenSteps.x / 2), (int)(gapBetweenSteps.y / 2) ); 
+  //std::cout << "d: " << "(" << d.x << ", " << d.y << ")" << std::endl;
+  //std::cout << "s: " << "(" << d.x + s.x << ", " << d.y + s.y << ")" << std::endl;
+  //std::cout << "divisionsRegion: " << divisionsRegion << std::endl;
+  //std::cout << "GapBetweenSteps: " << "(" << gapBetweenSteps.x << ", " << gapBetweenSteps.y << ")" << std::endl;
+  //std::cout << "stepByStepRegion: " << "(" << stepByStepRegion.x << ", " << stepByStepRegion.y << ")" << std::endl;
+  // Scene
+  for ( int sx = d.x; sx <= d.x + s.x; sx++ ){
+    for ( int sy = d.y; sy < d.y + s.y; sy++ ){
+      
+  //for ( int sx = d.x; sx <= d.x + s.x; sx++ ){
+  //  for ( int sy = d.y; sy <= d.y + s.y; sy++ ){
+      
+  //for ( int sx = d.x; sx <= d.x + s.x; sx++ ){
+  //  for ( int sy = d.y; sy <= d.y + s.y; sy++ ){
+  //for ( int sx = d.x + stepByStepRegion.x; sx < s.x + d.x; sx+=gapBetweenSteps.x ){
+  //  for ( int sy = d.y + stepByStepRegion.y; sy < s.y + d.y; sy+=gapBetweenSteps.y ){
+      t_aux = -1.0; // Absurd value t
+      //Looking for lookat's
+      GLdouble x, y, z;
+      GLint realy = view[3] - (GLint)sy - 1;
+      gluUnProject((GLdouble)sx, (GLdouble)realy, 1.0, model, proj, view, &x, &y, &z);
+      Vetor* lookat = new Vetor();
+      lookat->valores_vetor((double)x, (double)y, (double)z);
+      
+      Raio* r = new Raio(); // Ray
+      
+      int tamanho = cena->size_objetos_pilha();
+      for (int k = 0; k < tamanho; k++){ // Loop scene
+	Objeto* obj = cena->excluir_objetos_pilha();
+	r->atualizar_vetores(lookfrom, lookat, obj);
+	double t = r -> calcula_t();
+	if (t > 0.0){         //Verificar se o t encontrado e maior que zero                                                                                                                   
+	  if (t_aux == -1.0){ //Nao tem nenhum valor maior que 0 que seja menor que -1                                                                                                         
+	    t_aux = t;
+	    objeto_salvo = obj;
+	  }
+	  else{
+	    if (t < t_aux){           //Verificar se e menor que os t's encontrados                                                                                                            
+	      t_aux = t;
+	      objeto_salvo = obj;
+	    }
+	  }
+	}
+	cena_auxiliar->incluir_objetos_pilha(obj);
+      }
+      
+      Cena* tmp = cena;
+      cena = cena_auxiliar;
+      cena_auxiliar = tmp;
+
+      if (t_aux > 0.0){ // Sphere has been intercepted
+	r->atualizar_vetores(lookfrom, lookat, objeto_salvo);
+	Vetor* int_esfera = new Vetor();
+	int_esfera = r->interseccao_esfera(t_aux);
+	luz->atualizar_vetores_auxiliares(int_esfera, objeto_salvo->posicao_esfera(), lookfrom);
+	Vetor* cores_objeto = new Vetor();
+	// Fixed texture
+	cores_objeto = objeto_salvo->cor_esfera();
+	// Random texture
+	//Limites da cor do objeto
+	//Vetor* range_areia_superior = new Vetor();  //Vetor de limite superior da cor                                                                                                        
+	//range_areia_superior->valores_vetor(223.0, 246.0, 143.0);                                                                                                                            
+	//Vetor* range_areia_inferior = new Vetor();  //Vetor de limite inferior da cor                                                                                                        
+	//range_areia_inferior->valores_vetor(139.0, 129.0, 76.0);                                                                                                                             
+	//Textura* cor_areia = new Textura(range_areia_superior, range_areia_inferior);                                                                                                        
+	//Aplicando a textura ao objeto                                                                                                                                                        
+	//objeto_salvo->modificar_cor_pixel(cor_areia);                                                                                                                                        
+	//cores_objeto = objeto_salvo->cor_esfera();
+	
+	Vetor* cor_luz = new Vetor();
+	double valor_luz_vermelha = luz->calcula_luz_red();
+	double valor_luz_verde = luz->calcula_luz_green();
+	double valor_luz_azul = luz->calcula_luz_blue();
+	
+	cor_luz->valores_vetor(valor_luz_vermelha, valor_luz_verde, valor_luz_azul);
+	
+	if ( t_auxMax < t_aux ){
+	  t_auxMax = t_aux;
+	  colors[2] = (GLubyte)(cor_luz->vx() * (cores_objeto->vx()/cores_objeto->norma())) ;
+	  colors[1] = (GLubyte)(cor_luz->vy() * (cores_objeto->vy()/cores_objeto->norma())) ;
+	  colors[0] = (GLubyte)(cor_luz->vz() * (cores_objeto->vz()/cores_objeto->norma())) ;
+	}
+
+      }
+      
+    }
+  }
+  
+  return colors;
+}
+
+
+/**
+ * \fn GLubyte MMF_CPU( int k, int m, Point w, Point u, Point f,
+ * Cena* cena, Luz* luz, Vetor* lookfrom, Vetor* lookat,                                                                                                            
+ * GLdouble model[16], GLdouble proj[16], GLint view[4] )
+ *
+ * \brief Calculates the levels of MMF method using CPUs.
+ *
+ * \param k - Level of fovea
+ *        m - Number levels of fovea
+ *        w - Size of levels
+ *        u - Size of image
+ *        f - Position (x, y) of the fovea
+ *        cena - Cena que sera aplicado o ray tracing                                                                                                                                        
+ *        luz - Luz no objeto                                                                                                                                                                
+ *        lookfrom - posicao da camera                                                                                                                                                       
+ *        lookat - posicao para onde esta apontada a camera                                                                                                                                  
+ *        model, proj, view - matrizes modelview, projection e viewport                                                                                                                      
+ *
+ *
+ * \return Return the level of MMF method.
+ */
+Mat
+RenderMMF::MMF_CPU( int k, int m, Point w, Point u, Point f, Cena* cena, 
+		    Luz* luz, Vetor* lookfrom, Vetor* lookat, GLdouble model[16], 
+		    GLdouble proj[16], GLint view[4] ){
+  // Creating img
+  //GLubyte image[w.x][w.y][3];
+  Mat image(w.x, w.y, CV_8UC3);
+  
+  // Delta e Size
+  Point d = getDelta( k, m, w, u, f );
+  Point s = getSize( k, m, w, u );
+  
+  Point regions = Point( (int)(s.x - d.x)/w.x, (int)(s.y - d.y)/w.y );
+#ifdef DEBUG
+  std::cout << "regions: " << "(" << regions.x << ", " << regions.y << ")" << std::endl;
+#endif
+
+  std::vector< GLubyte > colors;
+#ifdef _OPENMP
+#pragma omp parallel for // reference http://ppc.cs.aalto.fi/ch3/nested/ 
+#endif
+  for ( int wi = 0; wi < w.x; wi++ ){ // Completing W
+    for ( int wj = 0; wj < w.y; wj++ ){
+      Point startRegion = Point(d.x + wi*regions.x, d.y + wj*regions.y );
+      Point finishRegion = Point( regions.x, regions.y );
+      //std::cout << "startRegion: " << "(" << startRegion.x << ", " << startRegion.y << ")" << std::endl;
+      //std::cout << "finishRegion: " << "(" << finishRegion.x << ", " << finishRegion.y << ")" << std::endl;
+      colors = calcColors( k, m, startRegion, finishRegion, cena, luz, lookfrom, lookat, model, proj, view );
+      Vec3b rgb = Vec3b((uchar)colors[0], (uchar)colors[1], (uchar)colors[2]);
+      image.at<Vec3b>(wi, wj) = rgb;
+      colors.clear();      
+    }
+  }
+
+  return image;
+
 }
 
 /**

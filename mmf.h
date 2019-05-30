@@ -67,7 +67,7 @@ struct MMF{
   __device__
 #endif
   Point getDelta( int k, int m, Point w, Point u, Point f );
-
+  
   /**
    * \fn Point getSize( int k, int m, Point w, Point u )
    *
