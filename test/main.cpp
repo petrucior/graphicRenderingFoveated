@@ -58,12 +58,13 @@ using rayTracing::Ray_tracing;
 
 #define N 300 // Image NxN
 // Size fovea W
-#define Wx 60
-#define Wy 60
+#define Wx 30
+#define Wy 30
 
-GLubyte imagem[N][N][3];
-Mat imagemFovea(Wx, Wy, CV_8UC3);
-
+GLubyte image[N][N][3];
+GLubyte imageFoveated[N][N][3];
+Mat imageFovea(Wx, Wy, CV_8UC3);
+Mat imageFoveated2(N, N, CV_8UC3);
 
 /**
  * \fn void init(void);
@@ -124,13 +125,13 @@ void display(void){
   c_esfera4->valores_vetor(100.0, 150.0, 0.0);
   //Limites da cor do objeto
   Vetor* range7 = new Vetor();	//Vetor de limite superior da cor
-  range7->valores_vetor(255.0, 254.0, 0.0);
+  range7->valores_vetor(254.0, 254.0, 0.0);
   Vetor* range8 = new Vetor();	//Vetor de limite inferior da cor
-  range8->valores_vetor(254.0, 254.0, 0.0);
+  range8->valores_vetor(255.0, 255.0, 0.0);
   Textura* cores4 = new Textura(range7, range8);
   Objeto* esfera4 = new Objeto();
   esfera4->atualizar_esfera(c_esfera4, 60.0, 0.3, 0.3, cores4);
-	
+  
   //Criando a cena
   Cena* cena = new Cena();
   cena->atualizar_cor_background(0.0, 0.0, 0.0);
@@ -138,21 +139,21 @@ void display(void){
   //incluindo primeira esfera
   cena->incluir_objetos_pilha(esfera1);
   //incluindo segunda esfera
-  //cena->incluir_objetos_pilha(esfera2);
+  cena->incluir_objetos_pilha(esfera2);
   //incluindo terceira esfera
-  //cena->incluir_objetos_pilha(esfera3);
+  cena->incluir_objetos_pilha(esfera3);
   //incluindo terceira esfera
-  //cena->incluir_objetos_pilha(esfera4);
+  cena->incluir_objetos_pilha(esfera4);
 	
   //std::cout << ("cena: ")<< cena->size_objetos_pilha() << std::endl;
   
 	
   //Lookfrom
   Vetor* lookfrom = new Vetor();
-  lookfrom->valores_vetor(150.0, 150.0, -1000.0); // 150.0 150.0 -1000.0
+  lookfrom->valores_vetor( 150.0, 150.0, 1000.0);
   //Lookat
   Vetor* lookat = new Vetor();
-  lookat->valores_vetor(2.0, 1.0, 0.0);
+  lookat->valores_vetor(0.0, 0.0, 0.0);
 	
   //Luz
   Luz* luz = new Luz();
@@ -174,21 +175,44 @@ void display(void){
   double start_clock = clock();
   //Aplicacao do ray tracing
   Ray_tracing* obj_ray_tracing = new Ray_tracing();
-  ////imagem = obj_ray_tracing -> print_imagem(cena, luz, lookfrom, lookat, modelview, projection, viewport);
-  obj_ray_tracing -> print_imagem(cena, luz, lookfrom, lookat, modelview, projection, viewport, *&imagem);
+  ////image = obj_ray_tracing -> print_imagem(cena, luz, lookfrom, lookat, modelview, projection, viewport);
+  obj_ray_tracing -> print_imagem(cena, luz, lookfrom, lookat, modelview, projection, viewport, *&image);
   double stop_clock = clock();
   std::cout << "time raytracing normal: " << (stop_clock-start_clock)/(CLOCKS_PER_SEC) << " segundos" << std::endl;
+  glDrawPixels(N, N, GL_RGB, GL_UNSIGNED_BYTE, image);
   
   start_clock = clock();
   RenderMMF mmf;
-  imagemFovea = mmf.MMF_CPU( 1, 7, Point(Wx, Wy), Point(N, N), Point(45, 45), cena, luz, lookfrom, lookat, modelview, projection, viewport );
+  //mmf.MMF_CPU( 0, 5, Point(Wx, Wy), Point(N, N), Point(0, 0), cena, luz, lookfrom, lookat, modelview, projection, viewport, *&imageFoveated );
+  //mmf.MMF_CPU( 0, 5, Point(0, 0), Point(N, N), cena, luz, lookfrom, lookat, modelview, projection, viewport, *&imageFoveated );
+  Point f = Point( 30, 30 );
+  mmf.calcLevels( 0,  5, Point(Wx, Wy), Point(N, N), f, cena, luz, lookfrom, lookat, modelview, projection, viewport, *&imageFoveated, *&imageFovea );
+  mmf.calcLevels( 1,  5, Point(Wx, Wy), Point(N, N), f, cena, luz, lookfrom, lookat, modelview, projection, viewport, *&imageFoveated, *&imageFovea );
+  mmf.calcLevels( 2,  5, Point(Wx, Wy), Point(N, N), f, cena, luz, lookfrom, lookat, modelview, projection, viewport, *&imageFoveated, *&imageFovea );
+  mmf.calcLevels( 3,  5, Point(Wx, Wy), Point(N, N), f, cena, luz, lookfrom, lookat, modelview, projection, viewport, *&imageFoveated, *&imageFovea );
+  mmf.calcLevels( 4,  5, Point(Wx, Wy), Point(N, N), f, cena, luz, lookfrom, lookat, modelview, projection, viewport, *&imageFoveated, *&imageFovea );
+  mmf.calcLevels( 5,  5, Point(Wx, Wy), Point(N, N), f, cena, luz, lookfrom, lookat, modelview, projection, viewport, *&imageFoveated, *&imageFovea );
+  //imageFoveated2 = mmf.foveated( 5, Point(Wx, Wy), Point(N, N), Point(0, 0), cena, luz, lookfrom, lookat, modelview, projection, viewport, 0 );
   stop_clock = clock();
   std::cout << "time raytracing mmf: " << (stop_clock-start_clock)/(CLOCKS_PER_SEC) << " segundos" << std::endl;
-  
-  glDrawPixels(N, N, GL_RGB, GL_UNSIGNED_BYTE, imagem);
-  imshow("Foveated image", imagemFovea);
-  //waitKey(0);
-   
+  glDrawPixels(N, N, GL_RGB, GL_UNSIGNED_BYTE, imageFoveated);  
+    
+  // --------------
+  // RenderMMF2.h
+  // --------------
+  /*start_clock = clock();
+  RenderMMF mmf;
+  imageFovea = mmf.MMF_CPU( 7, 7, Point(Wx, Wy), Point(N, N), Point(0, 0), cena, luz, lookfrom, lookat, modelview, projection, viewport );
+  stop_clock = clock();
+  std::cout << "time raytracing mmf: " << (stop_clock-start_clock)/(CLOCKS_PER_SEC) << " segundos" << std::endl;
+  imshow("Foveated image level", imageFovea);
+
+  start_clock = clock();
+  imageFoveated = mmf.foveated( 7, Point(Wx, Wy), Point(N, N), Point(0, 0), cena, luz, lookfrom, lookat, modelview, projection, viewport, 0 );
+  stop_clock = clock();
+  std::cout << "time raytracing mmf: " << (stop_clock-start_clock)/(CLOCKS_PER_SEC) << " segundos" << std::endl;*/
+  //imshow("Foveated image", imageFoveated2);
+
   glFlush();
 }
 

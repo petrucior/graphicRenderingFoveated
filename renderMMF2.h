@@ -103,6 +103,54 @@ struct RenderMMF{
   Point getSize( int k, int m, Point w, Point u );
 
   /**
+   * \fn std::vector< GLubyte > calcColors( int k, int m, Point d, Point s, Cena* cena, 
+   * Luz* luz, Vetor* lookfrom, Vetor* lookat, GLdouble model[16], GLdouble proj[16], 
+   * GLint view[4] )
+   * 
+   * \brief Calculates the colors of the defined region.
+   *
+   * \param k - Level of fovea
+   *        m - Number levels of fovea
+   *        d - Start point of the region to be analyzed
+   *        s - End point of the region to be analyzed
+   *        cena - Cena que sera aplicado o ray tracing                                                                                                                                        
+   *        luz - Luz no objeto                                                                                                                                                                
+   *        lookfrom - posicao da camera                                                                                                                                                       
+   *        lookat - posicao para onde esta apontada a camera                                                                                                                                  
+   *        model, proj, view - matrizes modelview, projection e viewport
+   *
+   * \return RGB colors to compose the scene
+   */
+  std::vector< GLubyte > calcColors( int k, int m, Point d, Point s, Cena* cena, Luz* luz, 
+				     Vetor* lookfrom, Vetor* lookat, GLdouble model[16], 
+				     GLdouble proj[16], GLint view[4] );
+  
+  /**
+   * \fn Mat MMF_CPU( int k, int m, Point w, Point u, Point f,
+   * Cena* cena, Luz* luz, Vetor* lookfrom, Vetor* lookat,                                                                                                            
+   * GLdouble model[16], GLdouble proj[16], GLint view[4] )
+   *
+   * \brief Calculates the levels of MMF method using CPUs.
+   *
+   * \param k - Level of fovea
+   *        m - Number levels of fovea
+   *        w - Size of levels
+   *        u - Size of image
+   *        f - Position (x, y) of the fovea
+   *        cena - Cena que sera aplicado o ray tracing                                                                                                                                        
+   *        luz - Luz no objeto                                                                                                                                                                
+   *        lookfrom - posicao da camera                                                                                                                                                       
+   *        lookat - posicao para onde esta apontada a camera                                                                                                                                  
+   *        model, proj, view - matrizes modelview, projection e viewport                                                                                                                      
+   
+   *
+   * \return Return the level of MMF method.
+   */
+  Mat MMF_CPU( int k, int m, Point w, Point u, Point f, Cena* cena, 
+	       Luz* luz, Vetor* lookfrom, Vetor* lookat, GLdouble model[16], 
+	       GLdouble proj[16], GLint view[4] );
+  
+  /**
    * \fn Point mapLevel2Image( int k, int m, Point w, Point u, Point f, Point px )
    *
    * \brief Calculates the position of pixel on the level to image.
@@ -116,66 +164,11 @@ struct RenderMMF{
    *
    * \return Return the position of pixel on the both axis to image.
    */
-#ifdef __CUDACC__
-  __device__
-#endif
   Point mapLevel2Image( int k, int m, Point w, Point u, Point f, Point px );
-
-
-  /**
-   * \fn const GLvoid MMF_CPU( int k, int m, Point d, Point cp, Cena* cena, 
-   * Luz* luz, Vetor* lookfrom, Vetor* lookat, GLdouble model[16], GLdouble proj[16], 
-   * GLint view[4], GLubyte imagem[300][300][3] )
-   * 
-   * \brief Painting rendered scene with defined regions by MMF method using CPUs.
-   *
-   * \param k - Level of fovea
-   *        m - Number levels of fovea
-   *        d - Start point of the region to be analyzed
-   *        s - End point of the region to be analyzed
-   *        cp - Point of complement of the region
-   *        cena - Cena que sera aplicado o ray tracing                                                                                                                                        
-   *        luz - Luz no objeto                                                                                                                                                                
-   *        lookfrom - posicao da camera                                                                                                                                                       
-   *        lookat - posicao para onde esta apontada a camera                                                                                                                                  
-   *        model, proj, view - matrizes modelview, projection e viewport
-   *        imagem - Pointer to image
-   *
-   */
-  //const GLvoid
-  Vec3b MMF_CPU( int k, int m, Point d, Point s, Point cp, Cena* cena, Luz* luz, 
-		 Vetor* lookfrom, Vetor* lookat, GLdouble model[16], 
-		 GLdouble proj[16], GLint view[4], GLubyte imagem[300][300][3], Mat img );
-
-  /**
-   * \fn const GLvoid calcLevels(int k, int m, Point w, Point u, Point f, Cena* cena, 
-   * Luz* luz, Vetor* lookfrom, Vetor* lookat, GLdouble model[16], GLdouble proj[16], 
-   * GLint view[4], GLubyte imagem[300][300][3] )
-   * 
-   * \brief Painting rendered scene with defined regions by MMF method using CPUs.
-   *
-   * \param k - Level of fovea
-   *        m - Number levels of fovea
-   *        w - Size of levels
-   *        u - Size of image
-   *        f - Position (x, y) of the fovea
-   *        cena - Cena que sera aplicado o ray tracing                                                                                                                                        
-   *        luz - Luz no objeto                                                                                                                                                                
-   *        lookfrom - posicao da camera                                                                                                                                                       
-   *        lookat - posicao para onde esta apontada a camera                                                                                                                                  
-   *        model, proj, view - matrizes modelview, projection e viewport
-   *        imagem - Pointer to image
-   *
-   */
-  const GLvoid calcLevels( int k, int m, Point w, Point u, Point f, Cena* cena, Luz* luz, 
-			   Vetor* lookfrom, Vetor* lookat, GLdouble model[16], 
-			   GLdouble proj[16], GLint view[4], GLubyte imagem[300][300][3], Mat img );
   
-
-
   /**
    * \fn Mat foveated( int m, Point w, Point u, Point f,
-   * Cena* cena, Luz* luz, Vetor* lookfrom, Vetor* lookat,
+   * Cena* cena, Luz* luz, Vetor* lookfrom, Vetor* lookat,                                                                                                            
    * GLdouble model[16], GLdouble proj[16], GLint view[4] )
    *
    * \brief Calculates the levels of MMF method using CPUs.
@@ -184,19 +177,19 @@ struct RenderMMF{
    *        w - Size of levels
    *        u - Size of image
    *        f - Position (x, y) of the fovea
-   *        cena - Cena que sera aplicado o ray tracing
-   *        luz - Luz no objeto
-   *        lookfrom - posicao da camera
-   *        lookat - posicao para onde esta apontada a camera
-   *        model, proj, view - matrizes modelview, projection e viewport
+   *        cena - Cena que sera aplicado o ray tracing                                                                                                                                        
+   *        luz - Luz no objeto                                                                                                                                                                
+   *        lookfrom - posicao da camera                                                                                                                                                       
+   *        lookat - posicao para onde esta apontada a camera                                                                                                                                  
+   *        model, proj, view - matrizes modelview, projection e viewport                                                                                                                      
    *        method - If (0) by default will be considered MMF_CPU, else (1) will be
    *        considered MMF_GPU
    *
    * \return Return the level of MMF method.
    */
-  Mat foveated( int m, Point w, Point u, Point f, Cena* cena,
-                Luz* luz, Vetor* lookfrom, Vetor* lookat, GLdouble model[16],
-                GLdouble proj[16], GLint view[4], int method );
+  Mat foveated( int m, Point w, Point u, Point f, Cena* cena, 
+		Luz* luz, Vetor* lookfrom, Vetor* lookat, GLdouble model[16], 
+		GLdouble proj[16], GLint view[4], int method );
   
 };
 
@@ -256,75 +249,61 @@ RenderMMF::getSize( int k, int m, Point w, Point u ){
 }
 
 /**
- * \fn Point mapLevel2Image( int k, int m, Point w, Point u, Point f, Point px )
- *
- * \brief Calculates the position of pixel on the level to image.
- *
- * \param k - Level of fovea
- *        m - Number levels of fovea
- *        w - Size of levels
- *        u - Size of image
- *        f - Position (x, y) of the fovea
- *        px - Pixel (x, y) that we want to map.
- *
- * \return Return the position of pixel on the both axis to image.
- */
-Point
-RenderMMF::mapLevel2Image( int k, int m, Point w, Point u, Point f, Point px ){
-  int _px = ( (k * w.x) * (u.x - w.x) + (2 * k * w.x * f.x) + (2 * px.x) * ( (m * u.x) - (k * u.x) + (k * w.x) ) )/ (2 * m * w.x);
-  int _py = ( (k * w.y) * (u.y - w.y) + (2 * k * w.y * f.y) + (2 * px.y) * ( (m * u.y) - (k * u.y) + (k * w.y) ) )/ (2 * m * w.y);
-#ifdef DEBUG
-  std::cout << "Map: ( " << _px << ", " << _py << " ) " << std::endl;
-#endif
-  return Point( _px, _py );
-}
-
-
-/**
- * \fn const GLvoid MMF_CPU( int k, int m, Point d, Point s, Point cp, Cena* cena, 
+ * \fn std::vector< GLubyte > calcColors( int k, int m, Point d, Point s, Cena* cena, 
  * Luz* luz, Vetor* lookfrom, Vetor* lookat, GLdouble model[16], GLdouble proj[16], 
- * GLint view[4], GLubyte imagem[300][300] )
+ * GLint view[4] )
  * 
- * \brief Painting rendered scene with defined regions by MMF method using CPUs.
+ * \brief Calculates the colors of the defined region.
  *
  * \param k - Level of fovea
  *        m - Number levels of fovea
  *        d - Start point of the region to be analyzed
  *        s - End point of the region to be analyzed
- *        cp - Point of complement of the region
  *        cena - Cena que sera aplicado o ray tracing                                                                                                                                        
  *        luz - Luz no objeto                                                                                                                                                                
  *        lookfrom - posicao da camera                                                                                                                                                       
  *        lookat - posicao para onde esta apontada a camera                                                                                                                                  
  *        model, proj, view - matrizes modelview, projection e viewport
- *        imagem - Pointer to image
  *
+ * \return RGB colors to compose the scene
  */
-//const GLvoid
-Vec3b
-RenderMMF::MMF_CPU( int k, int m, Point d, Point s, Point cp, Cena* cena, Luz* luz, 
-		    Vetor* lookfrom, Vetor* lookat, GLdouble model[16], 
-		    GLdouble proj[16], GLint view[4], GLubyte imagem[300][300][3], Mat img ){
-  Vec3b rgb = Vec3b((uchar) 255, (uchar) 0, (uchar) 255);
+std::vector< GLubyte > 
+RenderMMF::calcColors( int k, int m, Point d, Point s, Cena* cena, Luz* luz, 
+		       Vetor* lookfrom, Vetor* lookat, GLdouble model[16], 
+		       GLdouble proj[16], GLint view[4] ){
+  std::vector< GLubyte > colors (3);
+  colors[0] = 0.0; colors[1] = 0.0; colors[2] = 0.0;
   Cena* cena_auxiliar = new Cena();
   Objeto* objeto_salvo = new Objeto();
   double t_aux;
-  
+  double t_auxMax = -1.0;
   // Loop parameters
-  // Delta e Size
-  //Point d = getDelta( k, m, w, u, f );
-  //Point s = getSize( k, m, w, u );
+  int divisionsRegion = 2*( m - (k+1) ) + 1;
+  Point gapBetweenSteps = Point( (int)((s.x + d.x)/ divisionsRegion), (int)((s.y + d.y)/ divisionsRegion) );
+  Point stepByStepRegion = Point( (int)(gapBetweenSteps.x / 2), (int)(gapBetweenSteps.y / 2) ); 
+  //std::cout << "d: " << "(" << d.x << ", " << d.y << ")" << std::endl;
+  //std::cout << "s: " << "(" << d.x + s.x << ", " << d.y + s.y << ")" << std::endl;
+  //std::cout << "divisionsRegion: " << divisionsRegion << std::endl;
+  //std::cout << "GapBetweenSteps: " << "(" << gapBetweenSteps.x << ", " << gapBetweenSteps.y << ")" << std::endl;
+  //std::cout << "stepByStepRegion: " << "(" << stepByStepRegion.x << ", " << stepByStepRegion.y << ")" << std::endl;
   
   // Scene
-  for (int i = d.x; i < d.x + s.x; i++){
-    for (int j = d.y; j < d.y + s.y; j++){
+  //for ( int sx = d.x; sx <= d.x + 1; sx++ ){ // Getting the first pixel of region
+  //  for ( int sy = d.y; sy < d.y + 1; sy++ ){
+      
+  for ( int sx = d.x; sx <= d.x + s.x; sx++ ){ // Getting all pixels of region
+    for ( int sy = d.y; sy < d.y + s.y; sy++ ){
+  
+  // Inteligent sampling, but wasn't finished
+  //for ( int sx = d.x + stepByStepRegion.x; sx < s.x + d.x; sx+=gapBetweenSteps.x ){
+  //  for ( int sy = d.y + stepByStepRegion.y; sy < s.y + d.y; sy+=gapBetweenSteps.y ){
       t_aux = -1.0; // Absurd value t
       //Looking for lookat's
       GLdouble x, y, z;
-      GLint realy = view[3] - (GLint)j;
+      GLint realy = view[3] - (GLint)sy;
       //Read the window z value from the z-buffer
-      glReadPixels( i, realy, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &z );
-      gluUnProject((GLdouble)i, (GLdouble)realy, 1, model, proj, view, &x, &y, &z);
+      glReadPixels( sx, realy, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &z );
+      gluUnProject((GLdouble)sx, (GLdouble)realy, 1, model, proj, view, &x, &y, &z);
       Vetor* lookatAux = new Vetor();
       lookatAux->valores_vetor((double)x, (double)y, (double)z);
       
@@ -383,53 +362,28 @@ RenderMMF::MMF_CPU( int k, int m, Point d, Point s, Point cp, Cena* cena, Luz* l
 	
 	cor_luz->valores_vetor(valor_luz_vermelha, valor_luz_verde, valor_luz_azul);
 	
-	for ( int ri = i; ( ri < i + cp.x ) && ( ri < cena->lado() ); ri++ ){
-	  for ( int rj = j; ( rj < j + cp.y ) && ( rj < cena->altura() ); rj++ ){
-	    imagem[ri][rj][0] = (GLubyte)(cor_luz->vx() * (cores_objeto->vx()/cores_objeto->norma())) ;
-	    imagem[ri][rj][1] = (GLubyte)(cor_luz->vy() * (cores_objeto->vy()/cores_objeto->norma())) ;
-	    imagem[ri][rj][2] = (GLubyte)(cor_luz->vz() * (cores_objeto->vz()/cores_objeto->norma())) ;
-	  }
-	}
-	
-	/*imagem[i][j][0] = (GLubyte)(cor_luz->vx() * (cores_objeto->vx()/cores_objeto->norma())) ;
-	imagem[i][j][1] = (GLubyte)(cor_luz->vy() * (cores_objeto->vy()/cores_objeto->norma())) ;
-	imagem[i][j][2] = (GLubyte)(cor_luz->vz() * (cores_objeto->vz()/cores_objeto->norma())) ;*/
-	
-	rgb = Vec3b((uchar)imagem[i][j][2], (uchar)imagem[i][j][1], (uchar)imagem[i][j][0]);
-	//img.at<Vec3b>(299 - i, j) = rgb;
-	
-      }
-      else{
-
-	for ( int ri = i; ( ri < i + cp.x ) && ( ri < cena->lado() ); ri++ ){
-	  for ( int rj = j; ( rj < j + cp.y ) && ( rj < cena->altura() ); rj++ ){
-	    imagem[ri][rj][0] = 255;
-	    imagem[ri][rj][1] = 0;
-	    imagem[ri][rj][2] = 255;
-	  }
+	if ( t_auxMax < t_aux ){
+	  t_auxMax = t_aux;
+	  colors[2] = (GLubyte)(cor_luz->vx() * (cores_objeto->vx()/cores_objeto->norma())) ;
+	  colors[1] = (GLubyte)(cor_luz->vy() * (cores_objeto->vy()/cores_objeto->norma())) ;
+	  colors[0] = (GLubyte)(cor_luz->vz() * (cores_objeto->vz()/cores_objeto->norma())) ;
 	}
 
-	imagem[i][j][0] = 255;
-	imagem[i][j][1] = 0;
-	imagem[i][j][2] = 255;
-	  
-	rgb = Vec3b((uchar) 255, (uchar) 0, (uchar) 255);
-	//img.at<Vec3b>(299 - i, j) = rgb;
-		
       }
       
     }
   }
-  return rgb;
+  
+  return colors;
 }
 
 
 /**
- * \fn const GLvoid calcLevels( int k, int m, Point w, Point u, Point f, Cena* cena, 
- * Luz* luz, Vetor* lookfrom, Vetor* lookat, GLdouble model[16], GLdouble proj[16], 
- * GLint view[4], GLubyte imagem[300][300][3] )
- * 
- * \brief Painting rendered scene with defined regions by MMF method using CPUs.
+ * \fn Mat MMF_CPU( int k, int m, Point w, Point u, Point f,
+ * Cena* cena, Luz* luz, Vetor* lookfrom, Vetor* lookat,                                                                                                            
+ * GLdouble model[16], GLdouble proj[16], GLint view[4] )
+ *
+ * \brief Calculates the levels of MMF method using CPUs.
  *
  * \param k - Level of fovea
  *        m - Number levels of fovea
@@ -440,59 +394,83 @@ RenderMMF::MMF_CPU( int k, int m, Point d, Point s, Point cp, Cena* cena, Luz* l
  *        luz - Luz no objeto                                                                                                                                                                
  *        lookfrom - posicao da camera                                                                                                                                                       
  *        lookat - posicao para onde esta apontada a camera                                                                                                                                  
- *        model, proj, view - matrizes modelview, projection e viewport
- *        imagem - Pointer to image
+ *        model, proj, view - matrizes modelview, projection e viewport                                                                                                                      
  *
+ *
+ * \return Return the level of MMF method.
  */
-const GLvoid 
-RenderMMF::calcLevels( int k, int m, Point w, Point u, Point f, Cena* cena, Luz* luz, 
-		       Vetor* lookfrom, Vetor* lookat, GLdouble model[16], 
-		       GLdouble proj[16], GLint view[4], GLubyte imagem[300][300][3], Mat img ){
+Mat
+RenderMMF::MMF_CPU( int k, int m, Point w, Point u, Point f, Cena* cena, 
+		    Luz* luz, Vetor* lookfrom, Vetor* lookat, GLdouble model[16], 
+		    GLdouble proj[16], GLint view[4] ){
   // Checking conditions
   assert( ( w.x > 0 ) && ( w.x < u.x ) );
   assert( ( w.y > 0 ) && ( w.y < u.y ) );
   assert( ( u.x > 0 ) && ( u.y > 0 ) );
   assert( m >= 1 );
   
+  // Creating img
   //GLubyte image[w.x][w.y][3];
-  //Mat image(w.x, w.y, CV_8UC3);
+  Mat image(w.x, w.y, CV_8UC3);
   
   // Delta e Size
   Point d = getDelta( k, m, w, u, f );
   Point s = getSize( k, m, w, u );
   
-  //MMF_CPU( k, m, d, s, cena, luz, lookfrom, lookat, model, proj, view, imagem, img );
-  
-  Point regions = Point( (int)(s.x/w.x), (int)(s.y/w.y) );
+  Point regions = Point( (int)(s.x/w.x), (int)(s.y/w.y) ); 
   //Point regions = Point( (int)(s.x - d.x)/w.x, (int)(s.y - d.y)/w.y );
 #ifdef DEBUG
   std::cout << "regions: " << "(" << regions.x << ", " << regions.y << ")" << std::endl;
 #endif
-
-
+  
+  std::vector< GLubyte > colors;
 #ifdef _OPENMP
-#pragma omp parallel for // reference http://ppc.cs.aalto.fi/ch3/nested/
+#pragma omp parallel for // reference http://ppc.cs.aalto.fi/ch3/nested/ 
 #endif
   for ( int wi = 0; wi < w.x; wi++ ){ // Completing W
     for ( int wj = 0; wj < w.y; wj++ ){
-      /*Point startRegion = Point( d.x + wi*regions.x, d.y + wj*regions.y );
+      Point startRegion = Point(d.x + wi*regions.x, d.y + wj*regions.y );
       Point finishRegion = Point( regions.x, regions.y );
       //std::cout << "startRegion: " << "(" << startRegion.x << ", " << startRegion.y << ")" << std::endl;
       //std::cout << "finishRegion: " << "(" << finishRegion.x << ", " << finishRegion.y << ")" << std::endl;
-      MMF_CPU( k, m, startRegion, finishRegion, cena, luz, lookfrom, lookat, model, proj, view, imagem, img );*/
-      
-      Point startRegion = Point( d.x + wi*regions.x, d.y + wj*regions.y );
-      Point finishRegion = Point( 2, 2 ); //regions.x, regions.y );
-      img.at<Vec3b>((w.x - 1) - wi, wj) = MMF_CPU( k, m, startRegion, finishRegion, regions, cena, luz, lookfrom, lookat, model, proj, view, imagem, img );
+      colors = calcColors( k, m, startRegion, finishRegion, cena, luz, lookfrom, lookat, model, proj, view );
+      Vec3b rgb = Vec3b((uchar)colors[0], (uchar)colors[1], (uchar)colors[2]);
+      image.at<Vec3b>((w.x-1) - wi, wj) = rgb;
+      colors.clear();      
     }
   }
 
-  return;
+  return image;
+
 }
-  
+
+/**
+ * \fn Point mapLevel2Image( int k, int m, Point w, Point u, Point f, Point px )
+ *
+ * \brief Calculates the position of pixel on the level to image.
+ *
+ * \param k - Level of fovea
+ *        m - Number levels of fovea
+ *        w - Size of levels
+ *        u - Size of image
+ *        f - Position (x, y) of the fovea
+ *        px - Pixel (x, y) that we want to map.
+ *
+ * \return Return the position of pixel on the both axis to image.
+ */
+Point 
+RenderMMF::mapLevel2Image( int k, int m, Point w, Point u, Point f, Point px ){
+  int _px = ( (k * w.x) * (u.x - w.x) + (2 * k * w.x * f.x) + (2 * px.x) * ( (m * u.x) - (k * u.x) + (k * w.x) ) )/ (2 * m * w.x);
+  int _py = ( (k * w.y) * (u.y - w.y) + (2 * k * w.y * f.y) + (2 * px.y) * ( (m * u.y) - (k * u.y) + (k * w.y) ) )/ (2 * m * w.y);
+#ifdef DEBUG
+  std::cout << "Map: ( " << _px << ", " << _py << " ) " << std::endl;  
+#endif
+  return Point( _px, _py );
+}
+
 /**
  * \fn Mat foveated( int m, Point w, Point u, Point f,
- * Cena* cena, Luz* luz, Vetor* lookfrom, Vetor* lookat,
+ * Cena* cena, Luz* luz, Vetor* lookfrom, Vetor* lookat,                                                                                                            
  * GLdouble model[16], GLdouble proj[16], GLint view[4] )
  *
  * \brief Calculates the levels of MMF method using CPUs.
@@ -501,31 +479,27 @@ RenderMMF::calcLevels( int k, int m, Point w, Point u, Point f, Cena* cena, Luz*
  *        w - Size of levels
  *        u - Size of image
  *        f - Position (x, y) of the fovea
- *        cena - Cena que sera aplicado o ray tracing
- *        luz - Luz no objeto
- *        lookfrom - posicao da camera
- *        lookat - posicao para onde esta apontada a camera
- *        model, proj, view - matrizes modelview, projection e viewport
+ *        cena - Cena que sera aplicado o ray tracing                                                                                                                                        
+ *        luz - Luz no objeto                                                                                                                                                                
+ *        lookfrom - posicao da camera                                                                                                                                                       
+ *        lookat - posicao para onde esta apontada a camera                                                                                                                                  
+ *        model, proj, view - matrizes modelview, projection e viewport                                                                                                                      
  *        method - If (0) by default will be considered MMF_CPU, else (1) will be
  *        considered MMF_GPU
  *
  * \return Return the level of MMF method.
  */
 Mat 
-RenderMMF::foveated( int m, Point w, Point u, Point f, Cena* cena,
-	      Luz* luz, Vetor* lookfrom, Vetor* lookat, GLdouble model[16],
-	      GLdouble proj[16], GLint view[4], int method ){
+RenderMMF::foveated( int m, Point w, Point u, Point f, Cena* cena, 
+		     Luz* luz, Vetor* lookfrom, Vetor* lookat, GLdouble model[16], 
+		     GLdouble proj[16], GLint view[4], int method ){
   Mat imgFoveated(u.x, u.y, CV_8UC3);
-  GLubyte imageFoveated[300][300][3];
   if ( method == 0 ){ // MMF_CPU
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static, m+1) // Schedule(static, m+1) keeps the order
 #endif
     for ( int k = 0; k < m + 1; k++ ){ // Levels
-      Mat imgLevel(w.x, w.y, CV_8UC3);
-      //Mat imgLevel = MMF_CPU( k, m, w, u, f, cena, luz, lookfrom, lookat, model, proj, view );
-      calcLevels( k, m, w, u, f, cena, luz, lookfrom, lookat, model, proj, view, *&imageFoveated, *&imgLevel);
-      imshow("Teste", imgLevel);
+      Mat imgLevel = MMF_CPU( k, m, w, u, f, cena, luz, lookfrom, lookat, model, proj, view );
       // Mapping levels to foveated image
       Point initial = mapLevel2Image( k, m, w, u, f, Point( 0, 0 ) );
       Point final = mapLevel2Image( k, m, w, u, f, Point( w.x, w.y ) );
@@ -535,7 +509,7 @@ RenderMMF::foveated( int m, Point w, Point u, Point f, Cena* cena,
 #endif
       Rect roi = Rect( initial.x, initial.y, final.x - initial.x, final.y - initial.y );
       if ( k < m ){ // Copying levels to foveated image
-        resize( imgLevel, imgLevel, Size(final.y - initial.y, final.x - initial.x), 0, 0, CV_INTER_LINEAR );
+        resize( imgLevel, imgLevel, Size(final.x - initial.x, final.y - initial.y), 0, 0, CV_INTER_LINEAR );
         imgLevel.copyTo( imgFoveated( roi ) );
       }
       else
@@ -544,6 +518,6 @@ RenderMMF::foveated( int m, Point w, Point u, Point f, Cena* cena,
       cv::rectangle(imgFoveated, cv::Point(initial.x, initial.y), cv::Point(final.x - 1, final.y - 1), cv::Scalar(255, 255, 255));
     }
   }
+
   return imgFoveated;
 }
-  
