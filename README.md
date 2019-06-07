@@ -1,6 +1,8 @@
 # projectFovea
 This project was created to build MMF fovea to graphic rendering using OpenMP and Cuda libraries.
 
+Note: The CUDA implementation has not yet been finalized!
+
 ![scene](https://user-images.githubusercontent.com/3810960/59125304-4dec0c80-8938-11e9-8150-e54df91ee6db.png)
 
 Considering 7 levels and fovea positioned in the center of image (0, 0) and level size, W = (30, 30). This scene was 
