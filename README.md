@@ -1,5 +1,5 @@
 # projectFovea
-This project was created to build MMF foveae to graphic rendering using OpenMP and Cuda libraries.
+This project was created to build MMF fovea to graphic rendering using OpenMP and Cuda libraries.
 
 ![scene](https://user-images.githubusercontent.com/3810960/59125304-4dec0c80-8938-11e9-8150-e54df91ee6db.png)
 
