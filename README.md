@@ -9,6 +9,7 @@ defined 300 x 300.
 ![sceneFoveated](https://user-images.githubusercontent.com/3810960/59125359-8390f580-8938-11e9-8766-91604b9d1df8.png)
 
 time raytracing normal: 0.427374 segundos
+
 time raytracing mmf: 0.193421 segundos
 
 ## Package required
