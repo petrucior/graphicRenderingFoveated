@@ -142,10 +142,9 @@ struct RenderMMF{
    *        imagem - Pointer to image
    *
    */
-  //const GLvoid
-  Vec3b MMF_CPU( int k, int m, Point d, Point s, Point cp, Cena* cena, Luz* luz, 
-		 Vetor* lookfrom, Vetor* lookat, GLdouble model[16], 
-		 GLdouble proj[16], GLint view[4], GLubyte imagem[300][300][3], Mat img );
+  const GLvoid MMF_CPU( int k, int m, Point d, Point s, Point cp, Cena* cena, Luz* luz, 
+			Vetor* lookfrom, Vetor* lookat, GLdouble model[16], 
+			GLdouble proj[16], GLint view[4], GLubyte imagem[300][300][3] );
 
   /**
    * \fn const GLvoid calcLevels(int k, int m, Point w, Point u, Point f, Cena* cena, 
@@ -169,12 +168,12 @@ struct RenderMMF{
    */
   const GLvoid calcLevels( int k, int m, Point w, Point u, Point f, Cena* cena, Luz* luz, 
 			   Vetor* lookfrom, Vetor* lookat, GLdouble model[16], 
-			   GLdouble proj[16], GLint view[4], GLubyte imagem[300][300][3], Mat img );
+			   GLdouble proj[16], GLint view[4], GLubyte imagem[300][300][3] );
   
 
 
   /**
-   * \fn Mat foveated( int m, Point w, Point u, Point f,
+   * \fn const GLvoid foveated( int m, Point w, Point u, Point f,
    * Cena* cena, Luz* luz, Vetor* lookfrom, Vetor* lookat,
    * GLdouble model[16], GLdouble proj[16], GLint view[4] )
    *
@@ -189,14 +188,15 @@ struct RenderMMF{
    *        lookfrom - posicao da camera
    *        lookat - posicao para onde esta apontada a camera
    *        model, proj, view - matrizes modelview, projection e viewport
+   *        imagem - Pointer to image
    *        method - If (0) by default will be considered MMF_CPU, else (1) will be
    *        considered MMF_GPU
    *
    * \return Return the level of MMF method.
    */
-  Mat foveated( int m, Point w, Point u, Point f, Cena* cena,
-                Luz* luz, Vetor* lookfrom, Vetor* lookat, GLdouble model[16],
-                GLdouble proj[16], GLint view[4], int method );
+  const GLvoid foveated( int m, Point w, Point u, Point f, Cena* cena,
+			 Luz* luz, Vetor* lookfrom, Vetor* lookat, GLdouble model[16],
+			 GLdouble proj[16], GLint view[4], GLubyte imagem[300][300][3], int method );
   
 };
 
@@ -300,20 +300,13 @@ RenderMMF::mapLevel2Image( int k, int m, Point w, Point u, Point f, Point px ){
  *        imagem - Pointer to image
  *
  */
-//const GLvoid
-Vec3b
+const GLvoid
 RenderMMF::MMF_CPU( int k, int m, Point d, Point s, Point cp, Cena* cena, Luz* luz, 
 		    Vetor* lookfrom, Vetor* lookat, GLdouble model[16], 
-		    GLdouble proj[16], GLint view[4], GLubyte imagem[300][300][3], Mat img ){
-  Vec3b rgb = Vec3b((uchar) 255, (uchar) 0, (uchar) 255);
+		    GLdouble proj[16], GLint view[4], GLubyte imagem[300][300][3] ){
   Cena* cena_auxiliar = new Cena();
   Objeto* objeto_salvo = new Objeto();
   double t_aux;
-  
-  // Loop parameters
-  // Delta e Size
-  //Point d = getDelta( k, m, w, u, f );
-  //Point s = getSize( k, m, w, u );
   
   // Scene
   for (int i = d.x; i < d.x + s.x; i++){
@@ -354,9 +347,6 @@ RenderMMF::MMF_CPU( int k, int m, Point d, Point s, Point cp, Cena* cena, Luz* l
       cena = cena_auxiliar;
       cena_auxiliar = tmp;
 
-      //if ( t_aux != -1.0 )
-      //std::cout << t_aux << std::endl;
-
       if (t_aux > 0.0){ // Sphere has been intercepted
 	r->atualizar_vetores(lookfrom, lookatAux, objeto_salvo);
 	Vetor* int_esfera = new Vetor();
@@ -394,13 +384,8 @@ RenderMMF::MMF_CPU( int k, int m, Point d, Point s, Point cp, Cena* cena, Luz* l
 	/*imagem[i][j][0] = (GLubyte)(cor_luz->vx() * (cores_objeto->vx()/cores_objeto->norma())) ;
 	imagem[i][j][1] = (GLubyte)(cor_luz->vy() * (cores_objeto->vy()/cores_objeto->norma())) ;
 	imagem[i][j][2] = (GLubyte)(cor_luz->vz() * (cores_objeto->vz()/cores_objeto->norma())) ;*/
-	
-	rgb = Vec3b((uchar)imagem[i][j][2], (uchar)imagem[i][j][1], (uchar)imagem[i][j][0]);
-	//img.at<Vec3b>(299 - i, j) = rgb;
-	
       }
       else{
-
 	for ( int ri = i; ( ri < i + cp.x ) && ( ri < cena->lado() ); ri++ ){
 	  for ( int rj = j; ( rj < j + cp.y ) && ( rj < cena->altura() ); rj++ ){
 	    imagem[ri][rj][0] = 255;
@@ -408,19 +393,14 @@ RenderMMF::MMF_CPU( int k, int m, Point d, Point s, Point cp, Cena* cena, Luz* l
 	    imagem[ri][rj][2] = 255;
 	  }
 	}
-
-	imagem[i][j][0] = 255;
+	
+	/*imagem[i][j][0] = 255;
 	imagem[i][j][1] = 0;
-	imagem[i][j][2] = 255;
-	  
-	rgb = Vec3b((uchar) 255, (uchar) 0, (uchar) 255);
-	//img.at<Vec3b>(299 - i, j) = rgb;
-		
+	imagem[i][j][2] = 255;*/		
       }
       
     }
   }
-  return rgb;
 }
 
 
@@ -447,7 +427,7 @@ RenderMMF::MMF_CPU( int k, int m, Point d, Point s, Point cp, Cena* cena, Luz* l
 const GLvoid 
 RenderMMF::calcLevels( int k, int m, Point w, Point u, Point f, Cena* cena, Luz* luz, 
 		       Vetor* lookfrom, Vetor* lookat, GLdouble model[16], 
-		       GLdouble proj[16], GLint view[4], GLubyte imagem[300][300][3], Mat img ){
+		       GLdouble proj[16], GLint view[4], GLubyte imagem[300][300][3] ){
   // Checking conditions
   assert( ( w.x > 0 ) && ( w.x < u.x ) );
   assert( ( w.y > 0 ) && ( w.y < u.y ) );
@@ -474,16 +454,10 @@ RenderMMF::calcLevels( int k, int m, Point w, Point u, Point f, Cena* cena, Luz*
 #pragma omp parallel for // reference http://ppc.cs.aalto.fi/ch3/nested/
 #endif
   for ( int wi = 0; wi < w.x; wi++ ){ // Completing W
-    for ( int wj = 0; wj < w.y; wj++ ){
-      /*Point startRegion = Point( d.x + wi*regions.x, d.y + wj*regions.y );
-      Point finishRegion = Point( regions.x, regions.y );
-      //std::cout << "startRegion: " << "(" << startRegion.x << ", " << startRegion.y << ")" << std::endl;
-      //std::cout << "finishRegion: " << "(" << finishRegion.x << ", " << finishRegion.y << ")" << std::endl;
-      MMF_CPU( k, m, startRegion, finishRegion, cena, luz, lookfrom, lookat, model, proj, view, imagem, img );*/
-      
+    for ( int wj = 0; wj < w.y; wj++ ){      
       Point startRegion = Point( d.x + wi*regions.x, d.y + wj*regions.y );
       Point finishRegion = Point( 2, 2 ); //regions.x, regions.y );
-      img.at<Vec3b>((w.x - 1) - wi, wj) = MMF_CPU( k, m, startRegion, finishRegion, regions, cena, luz, lookfrom, lookat, model, proj, view, imagem, img );
+      MMF_CPU( k, m, startRegion, finishRegion, regions, cena, luz, lookfrom, lookat, model, proj, view, imagem );
     }
   }
 
@@ -491,7 +465,7 @@ RenderMMF::calcLevels( int k, int m, Point w, Point u, Point f, Cena* cena, Luz*
 }
   
 /**
- * \fn Mat foveated( int m, Point w, Point u, Point f,
+ * \fn const GLvoid foveated( int m, Point w, Point u, Point f,
  * Cena* cena, Luz* luz, Vetor* lookfrom, Vetor* lookat,
  * GLdouble model[16], GLdouble proj[16], GLint view[4] )
  *
@@ -506,17 +480,16 @@ RenderMMF::calcLevels( int k, int m, Point w, Point u, Point f, Cena* cena, Luz*
  *        lookfrom - posicao da camera
  *        lookat - posicao para onde esta apontada a camera
  *        model, proj, view - matrizes modelview, projection e viewport
+ *        imagem - Pointer to image
  *        method - If (0) by default will be considered MMF_CPU, else (1) will be
  *        considered MMF_GPU
  *
  * \return Return the level of MMF method.
  */
-Mat 
+const GLvoid 
 RenderMMF::foveated( int m, Point w, Point u, Point f, Cena* cena,
-	      Luz* luz, Vetor* lookfrom, Vetor* lookat, GLdouble model[16],
-	      GLdouble proj[16], GLint view[4], int method ){
-  Mat imgFoveated(u.x, u.y, CV_8UC3);
-  GLubyte imageFoveated[300][300][3];
+		     Luz* luz, Vetor* lookfrom, Vetor* lookat, GLdouble model[16],
+		     GLdouble proj[16], GLint view[4], GLubyte imagem[300][300][3], int method ){
   if ( method == 0 ){ // MMF_CPU
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static, m+1) // Schedule(static, m+1) keeps the order
@@ -524,26 +497,11 @@ RenderMMF::foveated( int m, Point w, Point u, Point f, Cena* cena,
     for ( int k = 0; k < m + 1; k++ ){ // Levels
       Mat imgLevel(w.x, w.y, CV_8UC3);
       //Mat imgLevel = MMF_CPU( k, m, w, u, f, cena, luz, lookfrom, lookat, model, proj, view );
-      calcLevels( k, m, w, u, f, cena, luz, lookfrom, lookat, model, proj, view, *&imageFoveated, *&imgLevel);
-      imshow("Teste", imgLevel);
-      // Mapping levels to foveated image
-      Point initial = mapLevel2Image( k, m, w, u, f, Point( 0, 0 ) );
-      Point final = mapLevel2Image( k, m, w, u, f, Point( w.x, w.y ) );
-#ifdef DEBUG
-      std::cout << "(xi, yi) = (" << initial.x << ", " << initial.y << ")" << std::endl;
-      std::cout << "(xf, yf) = (" << final.x << ", " << final.y << ")" << std::endl;
-#endif
-      Rect roi = Rect( initial.x, initial.y, final.x - initial.x, final.y - initial.y );
-      if ( k < m ){ // Copying levels to foveated image
-        resize( imgLevel, imgLevel, Size(final.y - initial.y, final.x - initial.x), 0, 0, CV_INTER_LINEAR );
-        imgLevel.copyTo( imgFoveated( roi ) );
-      }
-      else
-        imgLevel.copyTo( imgFoveated( roi ) );
+      calcLevels( k, m, w, u, f, cena, luz, lookfrom, lookat, model, proj, view, *&imagem );
       // Paint levels
-      cv::rectangle(imgFoveated, cv::Point(initial.x, initial.y), cv::Point(final.x - 1, final.y - 1), cv::Scalar(255, 255, 255));
+      //cv::rectangle(imgFoveated, cv::Point(initial.x, initial.y), cv::Point(final.x - 1, final.y - 1), cv::Scalar(255, 255, 255));
     }
   }
-  return imgFoveated;
+  return;
 }
   

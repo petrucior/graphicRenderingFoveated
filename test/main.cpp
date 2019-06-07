@@ -63,8 +63,6 @@ using rayTracing::Ray_tracing;
 
 GLubyte image[N][N][3];
 GLubyte imageFoveated[N][N][3];
-Mat imageFovea(Wx, Wy, CV_8UC3);
-Mat imageFoveated2(N, N, CV_8UC3);
 
 /**
  * \fn void init(void);
@@ -144,7 +142,6 @@ void display(void){
   cena->incluir_objetos_pilha(esfera3);
   //incluindo terceira esfera
   cena->incluir_objetos_pilha(esfera4);
-	
   //std::cout << ("cena: ")<< cena->size_objetos_pilha() << std::endl;
   
 	
@@ -183,36 +180,15 @@ void display(void){
   
   start_clock = clock();
   RenderMMF mmf;
-  //mmf.MMF_CPU( 0, 5, Point(Wx, Wy), Point(N, N), Point(0, 0), cena, luz, lookfrom, lookat, modelview, projection, viewport, *&imageFoveated );
-  //mmf.MMF_CPU( 0, 5, Point(0, 0), Point(N, N), cena, luz, lookfrom, lookat, modelview, projection, viewport, *&imageFoveated );
-  Point f = Point( 30, 30 );
-  mmf.calcLevels( 0,  5, Point(Wx, Wy), Point(N, N), f, cena, luz, lookfrom, lookat, modelview, projection, viewport, *&imageFoveated, *&imageFovea );
-  mmf.calcLevels( 1,  5, Point(Wx, Wy), Point(N, N), f, cena, luz, lookfrom, lookat, modelview, projection, viewport, *&imageFoveated, *&imageFovea );
-  mmf.calcLevels( 2,  5, Point(Wx, Wy), Point(N, N), f, cena, luz, lookfrom, lookat, modelview, projection, viewport, *&imageFoveated, *&imageFovea );
-  mmf.calcLevels( 3,  5, Point(Wx, Wy), Point(N, N), f, cena, luz, lookfrom, lookat, modelview, projection, viewport, *&imageFoveated, *&imageFovea );
-  mmf.calcLevels( 4,  5, Point(Wx, Wy), Point(N, N), f, cena, luz, lookfrom, lookat, modelview, projection, viewport, *&imageFoveated, *&imageFovea );
-  mmf.calcLevels( 5,  5, Point(Wx, Wy), Point(N, N), f, cena, luz, lookfrom, lookat, modelview, projection, viewport, *&imageFoveated, *&imageFovea );
-  //imageFoveated2 = mmf.foveated( 5, Point(Wx, Wy), Point(N, N), Point(0, 0), cena, luz, lookfrom, lookat, modelview, projection, viewport, 0 );
+  // Parameters
+  Point f = Point( 0, 0 );
+  Point w = Point( Wx, Wy );
+  Point u = Point( N, N );
+  mmf.foveated( 7, w, u, f, cena, luz, lookfrom, lookat, modelview, projection, viewport, *&imageFoveated, 0 );
   stop_clock = clock();
   std::cout << "time raytracing mmf: " << (stop_clock-start_clock)/(CLOCKS_PER_SEC) << " segundos" << std::endl;
-  glDrawPixels(N, N, GL_RGB, GL_UNSIGNED_BYTE, imageFoveated);  
-    
-  // --------------
-  // RenderMMF2.h
-  // --------------
-  /*start_clock = clock();
-  RenderMMF mmf;
-  imageFovea = mmf.MMF_CPU( 7, 7, Point(Wx, Wy), Point(N, N), Point(0, 0), cena, luz, lookfrom, lookat, modelview, projection, viewport );
-  stop_clock = clock();
-  std::cout << "time raytracing mmf: " << (stop_clock-start_clock)/(CLOCKS_PER_SEC) << " segundos" << std::endl;
-  imshow("Foveated image level", imageFovea);
-
-  start_clock = clock();
-  imageFoveated = mmf.foveated( 7, Point(Wx, Wy), Point(N, N), Point(0, 0), cena, luz, lookfrom, lookat, modelview, projection, viewport, 0 );
-  stop_clock = clock();
-  std::cout << "time raytracing mmf: " << (stop_clock-start_clock)/(CLOCKS_PER_SEC) << " segundos" << std::endl;*/
-  //imshow("Foveated image", imageFoveated2);
-
+  glDrawPixels(N, N, GL_RGB, GL_UNSIGNED_BYTE, imageFoveated);
+  
   glFlush();
 }
 
@@ -241,42 +217,6 @@ int main(int argc, char** argv)
   glutCreateWindow(argv[0]);
   init();
   glutReshapeFunc(reshape);
-  //pintando a imagem
-  /* for (int i = 0; i < n; i++){
-     for (int j = 0; j < m; j++){
-     print_pixel(i, j, 255.0, 255.0, 0.0);
-     }
-     }  */
-  /* 
-  //Primeira esfera
-  Vetor* c_esfera = new Vetor();
-  c_esfera->valores_vetor(2.0,2.0,1.0);
-  Vetor* cores = new Vetor();
-  cores->valores_vetor(1.0, 0.0, 0.0);
-  Objeto* esfera = new Objeto();
-  esfera->atualizar_esfera(c_esfera, 1.0, 0.0, 1.0, cores);
-	
-  //Criando a cena
-  Cena* cena = new Cena();
-  cena->atualizar_cor_background(0.0, 0.0, 0.0);
-  cena->atualizar_ka(1.2);
-  cena->incluir_objetos_pilha(esfera);
-	
-  //Lookfrom
-  Vetor* lookfrom = new Vetor();
-  lookfrom->valores_vetor(2.0, 3.0, 2.0);
-  //Lookat
-  Vetor* lookat = new Vetor();
-  lookat->valores_vetor(2.0, 1.0, 0.0);
-	
-  //Luz
-  Luz* luz = new Luz();
-  luz->posicao_luz(3.0, 3.0, 3.0);
-  luz->atualizar_constantes_phong(0.4, 0.3, 0.3, 200.0, 250.0, 0.0, 0.0 , 1.0, 1.0);
-	
-  Ray_tracing* obj_ray_tracing = new Ray_tracing();
-  imagem = obj_ray_tracing -> print_imagem(cena, luz, lookfrom, lookat, GL_MODELVIEW, GL_PROJECTION, GL_VIEWPORT);
-  */
   glutDisplayFunc(display);
   glutMainLoop();
   return 0;
