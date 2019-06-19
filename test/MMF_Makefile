@@ -20,7 +20,7 @@ LFLAGS= -Wall -g #-fopenmp
 #
 # A variável DIR indica o diretório dos arquivos de cabeçalho do projeto
 #
-DIR= ~/projectFovea
+DIR= ~/graphicRenderingFoveated
 
 #
 # A variável INCS indica o caminho dos arquivos de cabeçalho
