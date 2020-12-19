@@ -1,4 +1,4 @@
-# projectFovea
+# graphicRenderingFoveated
 This project was created to build MMF fovea to graphic rendering using OpenMP and Cuda libraries.
 
 Note: The CUDA implementation has not yet been finalized!
